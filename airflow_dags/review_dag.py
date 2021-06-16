@@ -11,7 +11,7 @@ default_arguments = {
 dag = DAG(
     dag_id="review_dag",
     max_active_runs=5,
-    schedule_interval='0 * * * *',
+    schedule_interval='@hourly',
     default_args=default_arguments,
     catchup=False
 )
