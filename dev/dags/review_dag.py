@@ -12,7 +12,7 @@ default_arguments = {
     'retry_delay': timedelta(seconds=10)
 }
 
-BUCKET_NAME = os.environ.get('BUCKET_NAME', 'test-airflow-12345')
+BUCKET_NAME = os.environ.get('BUCKET_NAME', 'frelin-ampilahy-test-airflow-s3-bucket')
 
 with DAG(
         dag_id="review_dag",
