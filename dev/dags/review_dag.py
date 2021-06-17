@@ -1,17 +1,38 @@
-from airflow import DAG
 from datetime import datetime, timedelta
+
+import os
+
+from airflow.models.dag import DAG
+from airflow.providers.amazon.aws.operators.s3_bucket import S3CreateBucketOperator, S3DeleteBucketOperator
 
 default_arguments = {
     'owner': "frils",
     'start_date': datetime(2021, 5, 21, 0, 0, 0),
     'retries': 3,
-    'retry_delay': timedelta(minutes=10)
+    'retry_delay': timedelta(seconds=10)
 }
 
-dag = DAG(
-    dag_id="review_dag",
-    max_active_runs=5,
-    schedule_interval='@hourly',
-    default_args=default_arguments,
-    catchup=False
-)
+BUCKET_NAME = os.environ.get('BUCKET_NAME', 'test-airflow-12345')
+
+with DAG(
+        dag_id="review_dag",
+        max_active_runs=5,
+        schedule_interval='@hourly',
+        default_args=default_arguments,
+        catchup=False
+) as dag:
+    # [START howto_operator_s3_bucket]
+    create_bucket = S3CreateBucketOperator(
+        task_id='s3_bucket_dag_create',
+        bucket_name=BUCKET_NAME,
+        region_name='us-east-1',
+    )
+
+    delete_bucket = S3DeleteBucketOperator(
+        task_id='s3_bucket_dag_delete',
+        bucket_name=BUCKET_NAME,
+        force_delete=True,
+    )
+    # [END howto_operator_s3_bucket]
+
+    create_bucket >> delete_bucket
