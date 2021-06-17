@@ -13,4 +13,8 @@ https://airflow.apache.org/docs/apache-airflow/1.10.1/plugins.html
 
 https://airflow.apache.org/docs/apache-airflow-providers-amazon/stable/operators/s3.html#create-and-delete-amazon-s3-buckets
 
-Note to install and 
+* Note to install and configure awscli (à verifier)
+
+* copy dags to dags
+
+cp -r /d/review-airflow-wsl/dev/dags/ /airflow_home/
