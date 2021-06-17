@@ -16,7 +16,7 @@ BUCKET_NAME = os.environ.get('BUCKET_NAME', 'test-airflow-12345')
 
 with DAG(
         dag_id="review_dag",
-        max_active_runs=5,
+        max_active_runs=1,
         schedule_interval='@hourly',
         default_args=default_arguments,
         catchup=False
