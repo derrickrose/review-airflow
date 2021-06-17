@@ -1,6 +1,5 @@
 from airflow import DAG
 from datetime import datetime, timedelta
-from airflow.operators import ReviewOperator
 
 default_arguments = {
     'owner': "frils",
@@ -16,17 +15,3 @@ dag = DAG(
     default_args=default_arguments,
     catchup=False
 )
-
-""""""
-review_operator = ReviewOperator(
-    task_id="review_operator",
-    param="some random text",
-    dag=dag)
-
-review_operator = ReviewOperator(
-    task_id="review_operator",
-    param="some random text",
-    dag=dag)
-
-review_operator >> review_operator
-""""""
