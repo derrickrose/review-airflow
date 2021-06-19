@@ -15,11 +15,11 @@ default_arguments = {
 BUCKET_NAME = os.environ.get('BUCKET_NAME', 'frelin-ampilahy-test-airflow-s3-bucket')
 
 with DAG(
-        dag_id="review_dag",
+        dag_id="create_delete_s3_bucket",
         max_active_runs=1,
         schedule_interval='@hourly',
         default_args=default_arguments,
-        catchup=False
+        catchup=True
 ) as dag:
     # [START howto_operator_s3_bucket]
     create_bucket = S3CreateBucketOperator(

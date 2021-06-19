@@ -1,20 +1,18 @@
-# airflow plugin
+# creation de virtualenv
 
-https://airflow.apache.org/docs/apache-airflow/1.10.1/plugins.html
+> python -m venv airflow_venv
 
-# notes
+# activation venv
 
-* after how much time a new DAGs should be picked up from the filesystem
+* activer venv sur windows sachant que venv es pour python3 et virtualenv pour python2
 
-> min_file_process_interval = 0
-> dag_dir_list_interval = 60
+> .\airflow_venv\Scripts\activate
 
-* S3 operators
+* pour activer sur linux source
 
-https://airflow.apache.org/docs/apache-airflow-providers-amazon/stable/operators/s3.html#create-and-delete-amazon-s3-buckets
+> ./bin/activate
 
-* Note to install and configure awscli (à verifier)
+# install requirements (file attached requirements.txt)
 
-* copy dags to dags
+> pip install -r requirements.txt
 
-cp -r /d/review-airflow-wsl/dev/dags/ /airflow_home/
