@@ -42,7 +42,7 @@ services:
     env_file:
       - ./local.env
     entrypoint: ""
-    command: bash -c "airflow initdb && /usr/local/airflow/entrypoints.sh webserver"
+    command: bash -c "airflow db init && /usr/local/airflow/entrypoints.sh webserver"
 
   airflow:
     image: airflow:local
