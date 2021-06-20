@@ -1,0 +1,59 @@
+version: '2.1'
+
+services:
+  airflow_image:
+    build:
+      # since we are going to use airflow image which would be built from the Dockerfile,
+      # this is why we define . as context
+      context: .
+      dockerfile: Dockerfile
+    image: airflow:local
+    container_name: airflow_local
+    # we redefine the entrypoint and the command because we don't nee to restart
+    entrypoint: [ "bash" ]
+    command: ""
+
+  postgres:
+    image: library/postgres:9.6
+    container_name: postgres
+    hostname: postgres
+    environment:
+      - POSTGRES_USER=airflow
+      - POSTGRES_PASSWORD=airflow
+      - POSTGRES_DB=airflow
+    ports:
+      - "5432:5432"
+
+  webserver:
+    image: airflow:local
+    container_name: airflow_webserver
+    restart: always
+    depends_on:
+      - postgres
+    # when run webserver and scheduler containers, we want to change files without rebuilding the images
+    # to do that we need to mount these following volumes
+    # mount_dir:link_inside_docker
+    volumes:
+      - ../mount_dir/dags:/usr/local/airflow/dags
+      - ../mount_dir/plugins:/usr/local/airflow/plugins
+      - ../mount_dir/logs:/usr/local/airflow/logs
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./local.env
+    entrypoint: ""
+    command: bash -c "airflow initdb && /usr/local/airflow/entrypoints.sh webserver"
+
+  airflow:
+    image: airflow:local
+    container_name: airflow_scheduler
+    restart: always
+    depends_on:
+      - webserver
+    volumes:
+      - ../mount_dir/dags:/usr/local/airflow/dags
+    env_file:
+      - ./local.env
+    entrypoint: ""
+    command: bash -c "/usr/local/airflow/entrypoint.sh scheduler"
+
