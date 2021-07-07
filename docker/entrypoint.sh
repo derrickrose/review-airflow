@@ -2,14 +2,14 @@
 CMD_AIRFLOW_COMMAND_PASSED="$1"
 
 case ${CMD_AIRFLOW_COMMAND_PASSED} in
-  "webserver")
-    airflow db init
+  webserver)
+    airflow initdb
     exec airflow webserver
     ;;
-  "scheduler")
+  scheduler)
     exec airflow scheduler
     ;;
   *)
-    exec "$@" # would execute de command which is passed
+    exec "$@"
     ;;
 esac
