@@ -19,7 +19,7 @@ services:
     hostname: postgres
     environment:
       - POSTGRES_USER=airflow
-      - POSTGRES_PASSWORD=airflow
+      - POSTGRES_PASSWORD=1q2w3e
       - POSTGRES_DB=airflow
     ports:
       - "5432:5432"
@@ -27,7 +27,7 @@ services:
   webserver:
     image: airflow:local
     container_name: airflow_webserver
-    restart: always
+    #restart: always
     depends_on:
       - postgres
     # when run webserver and scheduler containers, we want to change files without rebuilding the images
@@ -47,7 +47,7 @@ services:
   airflow:
     image: airflow:local
     container_name: airflow_scheduler
-    restart: always
+    #restart: always
     depends_on:
       - webserver
     volumes:

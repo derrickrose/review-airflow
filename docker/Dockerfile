@@ -25,6 +25,6 @@ EXPOSE 8080
 
 RUN chmod u+x entrypoint.sh
 
-ENTRYPOINT ["usr/local/airflow/entrypoint.sh"]
+ENTRYPOINT ["/usr/local/airflow/entrypoint.sh"]
 CMD ["webserver"]
 
