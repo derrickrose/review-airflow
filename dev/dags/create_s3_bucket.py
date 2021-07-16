@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 import os
 
 from airflow.models.dag import DAG
-from airflow.providers.amazon.aws.operators.s3_bucket import S3CreateBucketOperator, S3DeleteBucketOperator
+from airflow.providers.amazon.aws.operators.s3_bucket import S3CreateBucketOperator
 
 default_arguments = {
     'owner': "frils",
@@ -15,24 +15,17 @@ default_arguments = {
 BUCKET_NAME = os.environ.get('BUCKET_NAME', 'frelin-ampilahy-test-airflow-s3-bucket')
 
 with DAG(
-        dag_id="create_delete_s3_bucket",
+        dag_id="create_s3_bucket",
         max_active_runs=1,
-        schedule_interval='@hourly',
+        schedule_interval="@once",
+        # schedule_interval="@hourly",
         default_args=default_arguments,
         catchup=True
 ) as dag:
-    # [START howto_operator_s3_bucket]
     create_bucket = S3CreateBucketOperator(
-        task_id='s3_bucket_dag_create',
+        task_id='create_bucket',
         bucket_name=BUCKET_NAME,
         region_name='us-east-1',
     )
 
-    delete_bucket = S3DeleteBucketOperator(
-        task_id='s3_bucket_dag_delete',
-        bucket_name=BUCKET_NAME,
-        force_delete=True,
-    )
-    # [END howto_operator_s3_bucket]
-
-    create_bucket >> delete_bucket
+    create_bucket
