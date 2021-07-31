@@ -4,7 +4,7 @@ services:
 
   airflow_image:
     build:
-      context: .
+      context: ""
       dockerfile: Dockerfile
     image: airflow:local
     container_name: airflow_local
@@ -35,7 +35,7 @@ services:
     ports:
       - "8080:8080"
     env_file:
-      - ./local.env
+      - local.env
     entrypoint: ""
     command: bash -c "airflow initdb && /usr/local/airflow/entrypoint.sh webserver"
 
@@ -50,6 +50,6 @@ services:
       - ../dev/plugins:/usr/local/airflow/plugins
       - ../dev/logs:/usr/local/airflow/logs
     env_file:
-      - ./local.env
+      - local.env
     entrypoint: ""
     command: bash -c "/usr/local/airflow/entrypoint.sh scheduler"
