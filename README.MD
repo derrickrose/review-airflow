@@ -15,6 +15,8 @@ Link for details : https://docs.microsoft.com/fr-fr/windows/wsl/install-win10
 
 ### Installing Airflow on Ubuntu WSL
 
+* For the steps to follow, may refer to the scripts inside the directory wsl/
+
 Link for details : https://towardsdatascience.com/run-apache-airflow-on-windows-10-without-docker-3c5754bb98b4
 
 ---------------------------------------------------------------------------------------
