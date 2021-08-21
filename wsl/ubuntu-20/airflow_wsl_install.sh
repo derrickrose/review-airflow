@@ -11,10 +11,10 @@ sudo apt-get install python3-pip -y
 pip3 install apache-airflow
 
 ## create airflow home directory
-mkdir -p /home/frils/airflow_home
+mkdir -p /home/fampi/airflow_home
 
 ## make environment variable airflow_home
-export AIRFLOW_HOME=/home/frils/airflow_home
+export AIRFLOW_HOME=/home/fampi/airflow_home
 
 ## test airflow installation
 airflow info
