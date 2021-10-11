@@ -19,7 +19,7 @@ BUCKET_NAME = os.environ.get('BUCKET_NAME', 'frelin-ampilahy-test-airflow-s3-buc
 
 import logging
 
-SIDP_IWD_CONF_DICT = Variable.get("TEST_VARIABLE_JSON", deserialize_json=True)
+SIDP_IWD_CONF_DICT = {'hola': "hola", "greeting": "greeting"}
 
 SidpIwdConf = collections.namedtuple("SidpIwdConf",
                                      "hello greeting")
@@ -27,8 +27,6 @@ SIDP_IWD_CONF = SidpIwdConf(
     SIDP_IWD_CONF_DICT["hola"],
     SIDP_IWD_CONF_DICT["greeting"]
 )
-
-test_variable = Variable.get("TEST_VARIABLE")
 
 
 def take_execution_date(execution_date, variable, **kwargs):
@@ -61,7 +59,7 @@ with DAG(
         python_callable=take_execution_date,
 
         op_kwargs={'execution_date': '{{ ds }}',
-                   'test_variable': test_variable}
+                   'variable': BUCKET_NAME}
     )
 
 test_dag >> create_bucket
