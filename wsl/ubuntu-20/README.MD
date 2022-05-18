@@ -21,8 +21,8 @@ cf: https://towardsdatascience.com/run-apache-airflow-on-windows-10-without-dock
 
 * copy dags from dev directory to airflow dags directory
 
-`cp -r /d/review-airflow-wsl/dev/dags/ /home/frils/airflow`
+`cp -r /c/Users/fampi/Documents/izybe/review-airflow/dev/dags/ /home/frils/airflow`
 
 * copy plugins from dev to airflow plugins (should restart both scheduler and webserver)
 
-`cp -r /d/review-airflow-wsl/dev/plugins/ /home/frils/airflow`
+`cp -r /c/Users/fampi/Documents/izybe/review-airflow/dev/plugins/ /home/frils/airflow`
