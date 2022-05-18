@@ -25,7 +25,7 @@ Link for details : https://towardsdatascience.com/run-apache-airflow-on-windows-
 
 ### creation de virtualenv
 
-> python -m venv my_venv
+`python -m venv my_venv`
 
 ### activation venv
 
@@ -33,19 +33,19 @@ Link for details : https://towardsdatascience.com/run-apache-airflow-on-windows-
 
 * activer venv sur windows sachant que venv es pour python3 et virtualenv pour python2
 
-> .\my_venv\Scripts\activate
+`.\my_venv\Scripts\activate`
 
 * pour activer sous linux source
 
-> ./bin/activate
+`./bin/activate`
 
 ### install requirements (file attached requirements.txt)
 
-> pip install -r requirements.txt
+`pip install -r requirements.txt`
 
 ### print all requirements to a file
 
-> pip freeze >> requirements.txt
+`pip freeze >> requirements.txt`
 
 ---------------------------------------------------------------------------------------
 
@@ -66,11 +66,11 @@ https://airflow.apache.org/docs/apache-airflow/1.10.1/plugins.html
 
 * copy dags from dev to airflow dags
 
-> cp -r /d/review-airflow-wsl/dev/dags/ /home/frils/airflow/
+`cp -r /d/review-airflow-wsl/dev/dags/ /home/frils/airflow/`
 
 * copy plugins from dev to airflow plugins (should restart both scheduler and webserver)
 
-> cp -r /d/review-airflow-wsl/dev/plugins/ /home/frils/plugins/
+`cp -r /d/review-airflow-wsl/dev/plugins/ /home/frils/plugins/`
 
 * S3 operators
 
@@ -78,7 +78,7 @@ https://airflow.apache.org/docs/apache-airflow-providers-amazon/stable/operators
 
 * dependencies aws providers (for using the s3 operators before)
 
-> pip install 'apache-airflow[amazon]'
+`pip install 'apache-airflow[amazon]'`
 
 
 
