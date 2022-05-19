@@ -20,7 +20,7 @@ import logging
 
 IZYBE_CONF = {'hola': "hola", "greeting": "greeting"}
 
-IzybeTuple = collections.namedtuple("SidpIwdConf", "hello greeting")
+IzybeTuple = collections.namedtuple("IzybeTuple", "hello greeting")
 
 IZYBE_TUPLE = IzybeTuple(
     IZYBE_CONF["hola"],
@@ -46,7 +46,7 @@ with DAG(
     create_bucket = S3CreateBucketOperator(
         task_id='create_bucket',
         bucket_name=BUCKET_NAME,
-        region_name='us-east-1',
+        region_name='eu-west-1',
     )
 
     test_dag = PythonOperator(
