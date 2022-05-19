@@ -1,8 +1,7 @@
 from datetime import datetime, timedelta
 
 from airflow.models.dag import DAG
-from airflow.models import BaseOperator
-from airflow.utils.decorators import apply_defaults
+from operators.custom_operator import CustomOperator
 
 default_arguments = {
     'owner': "frils",
@@ -11,20 +10,8 @@ default_arguments = {
     'retry_delay': timedelta(seconds=10)
 }
 
-import logging as log
-
-
-class CustomOperator(BaseOperator):
-    @apply_defaults
-    def __init__(self, param, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.param = param
-
-    def execute(self, context):
-        log.info(f"{self.__class__.__name__} execute with param {self.param}")
-
 with DAG(
-        dag_id="custom_operator_in_local",
+        dag_id="custom_operator_using_plugin",
         max_active_runs=1,
         schedule_interval='@hourly',
         default_args=default_arguments,

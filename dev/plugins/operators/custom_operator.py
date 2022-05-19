@@ -11,4 +11,4 @@ class CustomOperator(BaseOperator):
         self.param = param
 
     def execute(self, context):
-        log.info(f"{self.__class__.__name__} execute with param {self.param}")
+        log.info(f"{self.__class__.__name__} execute on plugin with param {self.param}")

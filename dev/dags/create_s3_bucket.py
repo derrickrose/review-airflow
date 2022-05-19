@@ -3,10 +3,9 @@ from datetime import datetime, timedelta
 
 import os
 
-from airflow.models import Variable
 from airflow.models.dag import DAG
-from airflow.providers.amazon.aws.operators.s3_bucket import S3CreateBucketOperator
-from airflow.operators.python_operator import PythonOperator
+from airflow.operators.python import PythonOperator
+from airflow.providers.amazon.aws.operators.s3 import S3CreateBucketOperator
 
 default_arguments = {
     'owner': "frils",
@@ -15,38 +14,34 @@ default_arguments = {
     'retry_delay': timedelta(seconds=10)
 }
 
-BUCKET_NAME = os.environ.get('BUCKET_NAME', 'frelin-ampilahy-test-airflow-s3-bucket')
+BUCKET_NAME = os.environ.get('BUCKET_NAME', 'dev-izybe-s3-airflow-bucket')
 
 import logging
 
-SIDP_IWD_CONF_DICT = {'hola': "hola", "greeting": "greeting"}
+IZYBE_CONF = {'hola': "hola", "greeting": "greeting"}
 
-SidpIwdConf = collections.namedtuple("SidpIwdConf",
-                                     "hello greeting")
-SIDP_IWD_CONF = SidpIwdConf(
-    SIDP_IWD_CONF_DICT["hola"],
-    SIDP_IWD_CONF_DICT["greeting"]
+IzybeTuple = collections.namedtuple("SidpIwdConf", "hello greeting")
+
+IZYBE_TUPLE = IzybeTuple(
+    IZYBE_CONF["hola"],
+    IZYBE_CONF["greeting"]
 )
 
 
 def take_execution_date(execution_date, variable, **kwargs):
-    datedate = execution_date.replace("-", "/")
-    print("datedate", datedate)
-    logging.info(" datedate", datedate)
-    logging.info(" aaaaaa", execution_date)
+    date = execution_date.replace("-", "/")
+    print("date", date)
+    logging.info("Received date", date)
     print("execution_date", execution_date)
     print("test_variable", variable)
-    print("hello from variable tupe", SIDP_IWD_CONF.hello)
-    print("greeting from variable tupe", SIDP_IWD_CONF.greeting)
+    print("hello from variable tupe", IZYBE_TUPLE.hello)
 
 
 with DAG(
         dag_id="create_s3_bucket",
         max_active_runs=1,
-        schedule_interval="@once",
-        # schedule_interval="@hourly",
+        schedule_interval=None,
         default_args=default_arguments,
-        catchup=True
 ) as dag:
     create_bucket = S3CreateBucketOperator(
         task_id='create_bucket',
@@ -62,4 +57,4 @@ with DAG(
                    'variable': BUCKET_NAME}
     )
 
-test_dag >> create_bucket
+    test_dag >> create_bucket

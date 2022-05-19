@@ -7,7 +7,6 @@ from airflow.sensors.base import BaseSensorOperator
 
 import re
 import fnmatch
-import logging as log
 
 
 class CustomS3KeySensor(BaseSensorOperator):

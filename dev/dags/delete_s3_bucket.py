@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 import os
 
 from airflow.models.dag import DAG
-from airflow.providers.amazon.aws.operators.s3_bucket import S3DeleteBucketOperator
+from airflow.providers.amazon.aws.operators.s3 import S3DeleteBucketOperator
 
 default_arguments = {
     'owner': "frils",
@@ -12,7 +12,7 @@ default_arguments = {
     'retry_delay': timedelta(seconds=10)
 }
 
-BUCKET_NAME = os.environ.get('BUCKET_NAME', 'frelin-ampilahy-test-airflow-s3-bucket')
+BUCKET_NAME = os.environ.get('BUCKET_NAME', 'dev-izybe-s3-airflow-bucket')
 
 with DAG(
         dag_id="delete_s3_bucket",
