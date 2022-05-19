@@ -46,7 +46,7 @@ with DAG(
     create_bucket = S3CreateBucketOperator(
         task_id='create_bucket',
         bucket_name=BUCKET_NAME,
-        region_name='eu-west-1',
+        region_name='eu-west-3',
     )
 
     test_dag = PythonOperator(
