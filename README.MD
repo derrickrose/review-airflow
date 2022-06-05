@@ -83,3 +83,25 @@ https://airflow.apache.org/docs/apache-airflow-providers-amazon/stable/operators
 
 
 
+
+references 
+airflow on EKS
+https://www.udemy.com/course/apache-airflow-on-aws-eks-the-hands-on-guide/learn/lecture/17777076?src=sac&kw=airflow#overview
+
+complete hands on airflow
+https://www.udemy.com/course/the-complete-hands-on-course-to-master-apache-airflow/learn/lecture/13716108#overview
+
+mastering airflow and deploy to kubernetes in AWS
+https://www.udemy.com/course/mastering-apache-airflow/learn/lecture/16311008?src=sac&kw=airflow#overview
+
+Develop data in airflow
+https://www.udemy.com/course/draft/2145772/learn/lecture/13406176?src=sac&kw=airflow#overview
+
+Apache airflow hands on
+https://www.udemy.com/course/the-ultimate-hands-on-course-to-master-apache-airflow/learn/lecture/15809096?src=sac&kw=airflow#overview
+
+
+
+
+
+
