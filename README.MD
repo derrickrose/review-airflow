@@ -81,7 +81,8 @@ https://airflow.apache.org/docs/apache-airflow-providers-amazon/stable/operators
 `pip install 'apache-airflow[amazon]'`
 
 
-
+### troubleshooting wsl 
+https://docs.microsoft.com/fr-fr/windows/wsl/troubleshooting
 
 
 references 
