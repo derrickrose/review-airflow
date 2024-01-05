@@ -59,7 +59,7 @@ x-airflow-common:
   volumes:
     - ../../dags:/opt/airflow/dags
     - ../../logs:/opt/airflow/logs
-    - ../../lib:/opt/airflow/lib
+    - ../../lib:/opt/airflow/libdelete
     - ../../plugins:/opt/airflow/plugins
     - ../../tests:/opt/airflow/tests
   user: "${AIRFLOW_UID:-50000}:${AIRFLOW_GID:-50000}"
@@ -86,6 +86,8 @@ services:
       interval: 5s
       retries: 5
     restart: always
+    networks:
+      - airflow-net
 
   redis:
     image: redis:latest
@@ -97,6 +99,8 @@ services:
       timeout: 30s
       retries: 5
     restart: always
+    networks:
+      - airflow-net
 
   airflow-webserver:
     <<: *airflow-common
@@ -109,16 +113,22 @@ services:
       timeout: 10s
       retries: 5
     restart: always
+    networks:
+      - airflow-net
 
   airflow-scheduler:
     <<: *airflow-common
     command: scheduler
     restart: always
+    networks:
+      - airflow-net
 
   airflow-worker:
     <<: *airflow-common
     command: celery worker
     restart: always
+    networks:
+      - airflow-net
 
   airflow-init:
     <<: *airflow-common
@@ -129,6 +139,8 @@ services:
       _AIRFLOW_WWW_USER_CREATE: 'true'
       _AIRFLOW_WWW_USER_USERNAME: ${_AIRFLOW_WWW_USER_USERNAME:-airflow}
       _AIRFLOW_WWW_USER_PASSWORD: ${_AIRFLOW_WWW_USER_PASSWORD:-airflow}
+    networks:
+      - airflow-net
 
   flower:
     <<: *airflow-common
@@ -141,6 +153,8 @@ services:
       timeout: 10s
       retries: 5
     restart: always
+    networks:
+      - airflow-net
 
 #  airflow-triggerrer:
 #    <<: *airflow-common
@@ -155,6 +169,11 @@ services:
 #      <<: *airflow-common-depends-on
 #      airflow-init:
 #        condition: service_completed_successfully
+#    networks:
+#      - airflow-net
 
 volumes:
   postgres-db-volume:
+
+networks:
+  airflow-net: { }
