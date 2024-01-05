@@ -2,6 +2,20 @@
 
 --------------------------------------------------------------------------
 
+## Running airflow on docker (using docker-compose)
+
+### Setup airflow
+
+```
+docker-compose up airflow-init
+```
+
+### Run airflow
+
+```
+docker-compose up
+```
+
 ## Running airflow on Ubuntu WSL
 
 ### Installing Ubuntu WSL
@@ -80,12 +94,11 @@ https://airflow.apache.org/docs/apache-airflow-providers-amazon/stable/operators
 
 `pip install 'apache-airflow[amazon]'`
 
+### troubleshooting wsl
 
-### troubleshooting wsl 
 https://docs.microsoft.com/fr-fr/windows/wsl/troubleshooting
 
-
-references 
+references
 airflow on EKS
 https://www.udemy.com/course/apache-airflow-on-aws-eks-the-hands-on-guide/learn/lecture/17777076?src=sac&kw=airflow#overview
 
