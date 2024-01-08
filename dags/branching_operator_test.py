@@ -3,9 +3,11 @@ from datetime import datetime, timedelta
 
 import os
 
+from airflow import AirflowException
 from airflow.models.dag import DAG
 from airflow.operators.dummy import DummyOperator
 from airflow.operators.python import PythonOperator, BranchPythonOperator
+from airflow.utils.trigger_rule import TriggerRule
 
 default_arguments = {
     'owner': "frils",
@@ -31,8 +33,18 @@ IZYBE_TUPLE = IzybeTuple(
 def check_saturday(**context):
     execution_date = context["ds_nodash"]
     execution_date = datetime.strptime(execution_date, "%Y%m%d")
-    if execution_date.weekday() == 0:
+    if execution_date.weekday() == 5:
         return "saturday"
+    else:
+        return "other_day"
+
+
+def test_saturday(**context):
+    execution_date = context["ds_nodash"]
+    execution_date = datetime.strptime(execution_date, "%Y%m%d")
+    if execution_date.weekday() == 5:
+        print("it is saturday")
+        raise AirflowException("it is saturday")
     else:
         return "other_day"
 
@@ -49,8 +61,10 @@ def take_execution_date(execution_date, variable, **kwargs):
 with DAG(
         dag_id="branching_operator_test",
         max_active_runs=1,
-        schedule_interval=None,
+        schedule_interval="@daily",
+        start_date=datetime(2024, 1, 1),
         default_args=default_arguments,
+        catchup=True,
 ) as dag:
     is_saturday = BranchPythonOperator(
         task_id="is_saturday",
@@ -63,21 +77,28 @@ with DAG(
 
     other_day = DummyOperator(task_id="other_day")
 
-    work_day_task_1 = DummyOperator(task_id="work_day_task_1")
+    monday_to_saturday_task1 = DummyOperator(task_id="monday_to_saturday_task1")
 
-    work_day_task_2 = DummyOperator(task_id="work_day_task_2")
+    monday_to_saturday_task2 = PythonOperator(
+        task_id="monday_to_saturday_task2",
+        python_callable=test_saturday,
+        provide_context=True
+    )
 
-    work_day_and_saturday_task_1 = DummyOperator(task_id="work_day_and_saturday_task_1")
+    monday_to_friday_task1 = DummyOperator(task_id="monday_to_friday_task1")
 
-    work_day_and_saturday_task_2 = DummyOperator(task_id="work_day_and_saturday_task_2")
+    monday_to_friday_task2 = DummyOperator(task_id="monday_to_friday_task2")
 
-    # test_dag = PythonOperator(
-    #     task_id='test_dag',
-    #     python_callable=take_execution_date,
-    #
-    #     op_kwargs={'execution_date': '{{ ds }}',
-    #                'variable': BUCKET_NAME}
-    # )
-    is_saturday >> saturday
+    final_task = DummyOperator(task_id="final_task", trigger_rule=TriggerRule.NONE_FAILED)
 
-    is_saturday >> other_day
+    is_saturday >> saturday >> final_task
+
+    is_saturday >> other_day >> monday_to_friday_task1
+
+    monday_to_saturday_task1 >> monday_to_saturday_task2
+
+    monday_to_friday_task1 >> monday_to_friday_task2
+
+    monday_to_saturday_task2 >> final_task
+
+    monday_to_friday_task2 >> final_task
