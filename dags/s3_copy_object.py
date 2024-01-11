@@ -5,7 +5,8 @@ import os
 
 from airflow.models.dag import DAG
 from airflow.operators.python import PythonOperator
-from airflow.providers.amazon.aws.operators.s3 import S3CreateBucketOperator
+from airflow.providers.amazon.aws.hooks.s3 import S3Hook
+from airflow.providers.amazon.aws.operators.s3 import S3CreateBucketOperator, S3CopyObjectOperator
 
 default_arguments = {
     'owner': "frils",
@@ -14,7 +15,7 @@ default_arguments = {
     'retry_delay': timedelta(seconds=10)
 }
 
-BUCKET_NAME = os.environ.get('BUCKET_NAME', 'dev-miaradia-s3-bucket')
+BUCKET_NAME = os.environ.get('BUCKET_NAME', 'dev-izybe-s3-airflow-bucket')
 
 import logging
 
@@ -38,23 +39,16 @@ def take_execution_date(execution_date, variable, **kwargs):
 
 
 with DAG(
-        dag_id="create_s3_bucket",
+        dag_id="s3_copy_object",
         max_active_runs=1,
         schedule_interval=None,
         default_args=default_arguments,
 ) as dag:
-    create_bucket = S3CreateBucketOperator(
-        task_id='create_bucket',
-        bucket_name=BUCKET_NAME,
-        region_name='eu-west-3',
+    s3_copy_object = S3CopyObjectOperator(
+        task_id="s3_copy_object",
+        source_bucket_name="dev-miaradia-s3-bucket",
+        dest_bucket_name="frils-aws-bucket",
+        source_bucket_key="test_airflow.zip",
+        dest_bucket_key="test_airflow.zip"
     )
 
-    test_dag = PythonOperator(
-        task_id='test_dag',
-        python_callable=take_execution_date,
-
-        op_kwargs={'execution_date': '{{ ds }}',
-                   'variable': BUCKET_NAME}
-    )
-
-    test_dag >> create_bucket
