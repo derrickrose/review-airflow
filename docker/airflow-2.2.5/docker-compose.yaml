@@ -43,7 +43,7 @@ x-airflow-common:
   image: ${AIRFLOW_IMAGE_NAME:-extending_airflow:latest}
   environment:
     &airflow-common-env
-    PYTHON_PATH: /opt/airflow/lib
+    PYTHONPATH: /opt/airflow/lib
     AIRFLOW__WEBSERVER__RELOAD_ON_PLUGIN_CHANGE: 'true'
     AIRFLOW__CORE__RELOAD_ON_PLUGIN_CHANGE: 'true'
     AIRFLOW__CORE__LAZY_LOAD_PLUGINS: 'true'
@@ -59,7 +59,7 @@ x-airflow-common:
   volumes:
     - ../../dags:/opt/airflow/dags
     - ../../logs:/opt/airflow/logs
-    - ../../lib:/opt/airflow/libdelete
+    - ../../lib:/opt/airflow/lib
     - ../../plugins:/opt/airflow/plugins
     - ../../tests:/opt/airflow/tests
   user: "${AIRFLOW_UID:-50000}:${AIRFLOW_GID:-50000}"
@@ -155,6 +155,12 @@ services:
     restart: always
     networks:
       - airflow-net
+
+  awscli:
+    image: amazon/aws-cli
+    entrypoint: tail -f /dev/null
+    environment:
+      <<: *airflow-common-env
 
 #  airflow-triggerrer:
 #    <<: *airflow-common

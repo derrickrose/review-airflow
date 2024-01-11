@@ -16,3 +16,4 @@ RUN apt-get update \
 USER airflow
 COPY requirements.txt .
 RUN pip install --user -r requirements.txt
+RUN pip install Faker numpy boto3 botocore
