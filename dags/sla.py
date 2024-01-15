@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 
 from airflow.models.dag import DAG
+from airflow.operators.dummy import DummyOperator
 
 default_arguments = {
     'owner': "frils",
@@ -9,9 +10,7 @@ default_arguments = {
     'retry_delay': timedelta(seconds=10)
 }
 
-
 IZYBE_CONF = {'hola': "hola", "greeting": "greeting"}
-
 
 with DAG(
         dag_id="branching_operator_test",
@@ -21,3 +20,4 @@ with DAG(
         default_args=default_arguments,
         catchup=True,
 ) as dag:
+    dumy = DummyOperator(task_id="dumy")
