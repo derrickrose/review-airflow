@@ -3,7 +3,6 @@ from datetime import datetime, timedelta
 from airflow.models.dag import DAG
 from airflow.models import BaseOperator
 from airflow.utils.decorators import apply_defaults
-from botocore.errorfactory import ClientError
 
 default_arguments = {
     'owner': "frils",
@@ -62,7 +61,7 @@ class S3FileSensor(BaseSensorOperator):
 
 
 with DAG(
-        dag_id="custom_sensor_in_local",
+        dag_id="custom_s3_sensor",
         max_active_runs=1,
         schedule_interval='@hourly',
         default_args=default_arguments,

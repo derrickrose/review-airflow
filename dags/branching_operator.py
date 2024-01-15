@@ -59,7 +59,7 @@ def take_execution_date(execution_date, variable, **kwargs):
 
 
 with DAG(
-        dag_id="branching_operator_test",
+        dag_id="branching_operator",
         max_active_runs=1,
         schedule_interval="@daily",
         start_date=datetime(2024, 1, 1),

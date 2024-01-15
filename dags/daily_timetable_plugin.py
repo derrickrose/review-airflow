@@ -19,7 +19,7 @@ with DAG(
         start_date=datetime(2022, 5, 10),
         timetable=DailyTimetable(),
         catchup=True,
-        dag_id="dev_izybe_test_daily_plugin"
+        dag_id="daily_timetable_plugin"
 ) as dag:
     operator = PythonOperator(
         task_id='test_dag',
