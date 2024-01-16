@@ -13,7 +13,7 @@ default_arguments = {
 IZYBE_CONF = {'hola': "hola", "greeting": "greeting"}
 
 with DAG(
-        dag_id="branching_operator",
+        dag_id="sla",
         max_active_runs=1,
         schedule_interval="@daily",
         start_date=datetime(2024, 1, 1),
