@@ -17,7 +17,7 @@ with DAG(
 ) as dag:
     python_operator = PythonOperator(
         task_id="python_operator", python_callable=lambda: sleep(60 * 5),
-        timeout=1 * 60
+        timeout=timedelta(minutes=1)
     )
     dummy = DummyOperator(task_id="dummy")
     python_operator >> dummy
