@@ -1,10 +1,13 @@
+import os
 from datetime import datetime, timedelta
 from time import sleep
 
 from airflow import DAG
 from airflow.operators.dummy import DummyOperator
 from airflow.operators.python import PythonOperator
+from airflow.providers.amazon.aws.sensors.s3 import S3KeySensor
 
+BUCKET_NAME = os.environ.get('BUCKET_NAME', 'dev-izybe-s3-airflow-bucket')
 with DAG(
         dag_id="time_out_task",
         start_date=datetime(2024, 3, 10),
@@ -15,9 +18,14 @@ with DAG(
         description="Timeout DAG",
         catchup=False,
 ) as dag:
-    python_operator = PythonOperator(
-        task_id="python_operator", python_callable=lambda: sleep(60 * 5),
-        timeout=timedelta(minutes=1)
+    check_file_presence = S3KeySensor(
+        task_id='check_file_presence',
+        bucket_name=BUCKET_NAME,
+        bucket_key="DataIn/Infomart_20210715_120023.txt",
+        mode="poke",
+        poke_interval=60 * 1,
+        timeout=1 * 60
+
     )
     dummy = DummyOperator(task_id="dummy")
-    python_operator >> dummy
+    check_file_presence >> dummy
