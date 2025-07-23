@@ -1,5 +1,8 @@
 # Get python certified
 
+## python standard library 
+https://docs.python.org/3/library/functions.html
+
 ## built-in exceptions
 
 https://docs.python.org/3/library/exceptions.html
