@@ -7,7 +7,7 @@
 ####### yo siempre soy uno (no)
 ### semántica cojunto de reglas que determinan si una frase tiene sentido
 ####### me comí una dona (valida)
-####### una dona me comió (no tiene sentido)
+####### una dona me comió (no tiene sentidào)
 # código fuente different from   código máquina (executed by computers)
 # archivo fuente => file contening the source code
 def print_language_definition():

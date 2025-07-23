@@ -88,10 +88,8 @@ elif var == 5:
 else:
     print("var is less than 5")
 # puede escribir en una sola linea por si es una sola instruccion
-if var > 5:
-    print("var is greater than 5")
-else:
-    print("var no es greater than 5")
+if var > 5: print("var is greater than 5")
+else: print("var no es greater than 5")
 
 # pseudocodigo y introduccion a los bucles (ciclos)
 # bucle : ejecucion de uuna parte de codigo varias veces
@@ -112,7 +110,7 @@ if x == 1.:
 #   hazlo
 # while condicion_expression :
 #   instruccion
-# cuperpo del bucle son las instrucciones dentro del bucle
+# cuerpo del bucle son las instrucciones dentro del bucle
 # para salir de un bucle infinito presiona CTRL + C => KeyboardInterrupt error
 # while True:
 #     print("print")
@@ -392,7 +390,7 @@ print(numbers2)  # empieza con cero y termina con cuatro por lo que si hay cinco
 # cambiar el valor del primer elemento de la lista
 numbers[0] = 11
 print(numbers)
-# copiar el valor del quinto elemento al segundo
+# copiar el valor del qui=nto elemento al segundo
 numbers[1] = numbers[4]  # indice es el valor dentro de los corchetes
 # indexacion es el proceso de recuperar el valor de un elemento de una lista
 val = numbers[1]

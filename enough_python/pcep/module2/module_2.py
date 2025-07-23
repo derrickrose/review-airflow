@@ -29,7 +29,7 @@ print("¡Hola, Mundo!")
 ### el nombre de la funcion (print en este caso) junto con los parentesis y los argumentos, forman la invocacion de la funcion
 ### que sucede si python encuentra una invocacion como esta nombre_funcion(argumento)
 #### comprueba si el nombre especificado es legal (explora sus datos para encontrar una funcion existente del nombre cancela si no)
-#### comprueba si los requisitos de la funcion para el numero de argumentos le permiten invocal la dicha funcion
+#### comprueba si los requisitos de la funcion para el numero de argumentos le permiten invocar la dicha funcion
 #### python deja el codigo por un momento y salta dentro de la funcin que se desea invocar, toma los argumentos y los pasa a la funcion
 #### la funcion ejecuta el codigo, provoca el efecto deseado , evalua los resultados deseados y termina la tarea
 #### finalmente python regresa al codigo (al lugar inmediatamente despues de la invocacion) y reanuda su ejecucion
@@ -179,7 +179,7 @@ print(3E8)
 print(3.00E8)
 
 # codificando flotantes
-# almanecer numero que son muy pequenos (en el sentido que son muy cerca de cero)
+# almacenar numero que son muy pequenos (en el sentido que son muy cerca de cero)
 # la constante de planck denotada como h
 # 6.62607 x 10^-34
 # python no necesariamente codifica los numeros igual aquel que los has codificado
@@ -290,8 +290,7 @@ my_variable = 10
 # palabras clave o mejor dicho reservadas no se deben utilizar
 valores = ['False', 'None', 'True', 'and', 'as', 'assert', 'break', 'class', 'continue', 'def', 'del', 'elif', 'else',
            'except', 'finally', 'for', 'from', 'global', 'if', 'import', 'in', 'is', 'lambda', 'nonlocal', 'not', 'or',
-           'pass',
-           'raise', 'return', 'try', 'while', 'with', 'yield']
+           'pass', 'raise', 'return', 'try', 'while', 'with', 'yield']
 # for i in valores:
 #     print(i)
 

@@ -1,6 +1,12 @@
+var = 1
+print(var != 0)
+print(var != 1.)
+
 # reiniciar el bit a la posicion 3 del fin consiste a
-val = 7
-mask = 4  # since my bit is in the third position from end
+val = 7  # 00000111
+mask = 4  # 00000100 since my bit is in the third position from end , indice 2 from end
+print("checkar mi bit", val & mask)
+
 val = val & ~mask
 print("reiniciar mi bit", val)
 val = val & -5
