@@ -70,7 +70,6 @@ print(data)
 data.sort(key=lambda tup: tup[1])
 print(data)
 
-
 # appending an array to itself will not raise an exception in python
 ## instead it will show an array with etc => [...]
 arr = [1, 2, 3]
@@ -85,3 +84,12 @@ print(positif_profit)
 ## if using if-else, it should be at the beginning of the instructions
 negatif_profit_rounded_to_zero = [profit if profit > 0 else 0 for profit in net_profit]
 print(negatif_profit_rounded_to_zero)
+
+# double boucle in a comprehension list
+## first boucle comes first
+## and the variable to return comes at the head
+toto = [i for i in range(3) for j in range(3)]
+## => 000111222
+tata = [j for i in range(3) for j in range(3)]
+## => 012012012
+print(toto, tata)
