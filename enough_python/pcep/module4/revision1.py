@@ -91,3 +91,46 @@ def imprimir3(a):
 
 
 imprimir3(var)  # print(var) # NameError since deleted on func and also made global inside the function
+
+
+def fun (a=1, out=2):
+    print(a, out)
+    return a*out
+
+print(fun(1))
+
+print(1//2)
+print(1/1)
+print(11%4)
+
+print(2+3*5.)
+
+foo = (1,2,3)
+foo.index(1)
+
+x =1
+y=2
+x,x= 2,1
+print(x)
+
+
+
+listt = [1,2,3]
+listt.insert(-1, 100)
+print(listt)
+
+print(0%2)
+print(1%2)
+
+
+try:
+    5/0
+except ZeroDivisionError:
+    print("eto error ")
+except :
+    print("error")
+
+a = [1,2,3]
+b = a.copy()
+print(b)
+help(print())
