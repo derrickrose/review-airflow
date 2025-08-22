@@ -45,30 +45,6 @@ class Node:
         self.right.parent = self
 
 
-def get_hidden_message(root):
-    if not root:
-        return []
-
-    def visit(node):
-        if not node:
-            return []
-
-        current_message = []
-        if node.value[0] == 'b':
-            current_message.append(node.value[1])
-            current_message.extend(visit(node.left))
-            current_message.extend(visit(node.right))
-        elif node.value[0] == 'a':
-            current_message.extend(visit(node.left))
-            current_message.extend(visit(node.right))
-            current_message.append(node.value[1])
-        else:
-            current_message.extend(visit(node.left))
-            current_message.append(node.value[1])
-            current_message.extend(visit(node.right))
-        return current_message
-
-    return visit(root)
 
 
 bn = Node('bn')
@@ -90,4 +66,9 @@ ae.set_right(bc)
 a_.set_left(br)
 br.set_right(ay)
 
-print(get_hidden_message(bn))
+def get_hidden_message(root) -> list:
+    if not root:
+        return []
+
+
+
