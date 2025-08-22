@@ -66,9 +66,30 @@ ae.set_right(bc)
 a_.set_left(br)
 br.set_right(ay)
 
-def get_hidden_message(root) -> list:
+
+def get_hidden_message(root: Node) -> list:
     if not root:
         return []
+
+    def visit(node: Node) -> list:
+        if not node:
+            return []
+        current_message = []
+        left = visit(node.left)
+        right = visit(node.right)
+        if node.value[0] == "b":
+            current_message.append(node.value[1])
+            current_message = current_message + left + right
+        elif node.value[0] == "a":
+            current_message = left + right
+            current_message.append(node.value[1])
+        elif node.value[0] == "i":
+            current_message = left + [node.value[1]] + right
+        return current_message
+
+    return visit(root)
+
+print(get_hidden_message(bn))
 
 
 
