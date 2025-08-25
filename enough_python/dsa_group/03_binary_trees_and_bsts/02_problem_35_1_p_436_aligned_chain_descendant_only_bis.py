@@ -69,36 +69,3 @@ j.set_left(k)
 m.set_left(n)
 k.set_left(l)
 
-
-def get_max_aligned_descendant_chain(root: Node) -> list:
-    if not root:
-        return []
-
-    def is_aligned(node: Node, level: int) -> bool:
-        if not node:
-            return False
-        return node.value == level
-
-    max_path = []
-
-    def visit(node: Node, level: int) -> list:
-        if not node:
-            return []
-
-        left_max = visit(node.left, level + 1)
-        right_max = visit(node.right, level + 1)
-        current_max = left_max if len(left_max) >= len(right_max) else right_max
-
-        if not is_aligned(node, level):
-            return []
-        else:
-            current_max.append(node)
-            nonlocal max_path
-            max_path = current_max if len(current_max) >= len(max_path) else max_path
-            return current_max
-
-    visit(root, 0)
-
-    return max_path
-
-print(get_max_aligned_descendant_chain(a))
