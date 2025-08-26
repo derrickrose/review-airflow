@@ -69,3 +69,38 @@ j.set_left(k)
 m.set_left(n)
 k.set_left(l)
 
+
+def get_max_aligned_descendant(root):
+    if not root:
+        return []
+
+    def is_aligned(node, level):
+        if not node:
+            return False
+        return node.value == level
+
+    max_aligned = []
+
+    def visit(node, level):
+        if not node:
+            return []
+
+        left = visit(node.left, level + 1)
+        right = visit(node.right, level + 1)
+        best = left if len(left) >= len(right) else right
+
+        nonlocal max_aligned
+        if not is_aligned(node, level):
+            if len(best) >= len(max_aligned):
+                max_aligned = best
+            return []
+        else:
+            path = best + [node]
+            if len(path) >= len(max_aligned):
+                max_aligned = path
+            return path
+
+    visit(root, 0)
+    return max_aligned
+
+print(get_max_aligned_descendant(a))
