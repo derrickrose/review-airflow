@@ -1,13 +1,6 @@
 r"""
 
 
-         A
-      /     \
-    B         C
-     \        /\
-      D      G   H
-    /  \    /     \
-  E     F  I       J
 
 Given the root of a binary tree, return the number of triangles
 A triange is a set of three distinct nodes, a, c, and c where :
@@ -16,12 +9,22 @@ A triange is a set of three distinct nodes, a, c, and c where :
     - the path from a to b only consits of left children
     - and the path from a to c only consists of right children
 
+        A
+      /    \
+    B         C
+     \       / \
+      D     E    F
+     / \   /     \
+    G  H   I       J
+          /  \     /\
+        M    K    L   N
 """
 
 
 class Node:
-    def __init__(self, item, left=None, right=None):
+    def __init__(self, item, parent=None, left=None, right=None):
         self.item = item
+        self.parent = parent
         self.left = left
         self.right = right
 
@@ -30,9 +33,41 @@ class Node:
 
     def set_left(self, left):
         self.left = left
+        self.left.parent = self
 
     def set_right(self, right):
         self.right = right
+        self.right.parent = self
+
+
+a = Node("A")
+b = Node("B")
+c = Node("C")
+d = Node("D")
+e = Node("E")
+f = Node("F")
+g = Node("G")
+h = Node("H")
+i = Node("I")
+j = Node("J")
+k = Node("K")
+l = Node("L")
+m = Node("M")
+n = Node("N")
+
+a.set_left(b)
+a.set_right(c)
+b.set_right(d)
+d.set_left(g)
+d.set_right(h)
+c.set_left(e)
+e.set_left(i)
+c.set_right(f)
+c.set_right(j)
+i.set_right(k)
+j.set_left(l)
+i.set_left(m)
+j.set_right(n)
 
 
 def has_left(node):
@@ -47,57 +82,36 @@ def has_right(node):
     return node.right is not None
 
 
-a = Node("A")
-b = Node("B")
-c = Node("C")
-d = Node("D")
-e = Node("E")
-f = Node("F")
-g = Node("G")
-h = Node("H")
-i = Node("I")
-j = Node("J")
-
-a.set_left(b)
-a.set_right(c)
-b.set_right(d)
-d.set_left(e)
-d.set_right(f)
-c.set_left(g)
-c.set_right(h)
-g.set_left(i)
-h.set_right(j)
-
-
 def get_triangles(root):
     if not root:
         return []
 
-    storage = {}  # key node, value (left_children, right_children)
+    triangles = []
 
     def visit(node):
-        if not node:
-            return [], []
 
+        if not node:
+            return [], []  # left_children and right_children going downward from the current node
         left_children = []
         right_children = []
+        left, _ = visit(node.left)
+        _, right = visit(node.right)
         if has_left(node):
             left_children.append(node.left)
-            left = visit(node.left)
-            left_children.extend(left[0])
+
         if has_right(node):
             right_children.append(node.right)
-            right = visit(node.right)
-            right_children.extend(right[1])
-        storage[node] = left_children, right_children
+        left_children.extend(left)
+        right_children.extend(right)
+        if left_children and right_children:
+            iteration = min(len(left_children), len(right_children))
+            for index in range(iteration):
+                triangles.append(f"{left_children[index]}-{node}-{right_children[index]}")
+        # print(f"{left_children} - {node} - {right_children}")
+
         return left_children, right_children
 
     visit(root)
-    triangles = []
-    for key, value in storage.items():  # key a node , value tuple(left_children which is an array, right_children)
-        maximum_iteration = min(len(value[0]), len(value[1]))
-        for index in range(maximum_iteration):
-            triangles.append(f"{value[0][index]}-{key}-{value[1][index]}")
     return triangles
 
 
