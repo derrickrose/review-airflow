@@ -85,30 +85,27 @@ def get_max_aligned_path(root):
             return False
         return node.value == level
 
-    max_aligned = []
+    max_path = []
+
     def visit(node, level):
         if not node:
-            return [], []  # first list is the best between left and right, and second is the best arm going downward from the node
-
-        left_max, left_arm = visit(node.left, level + 1)
-        right_max, right_arm = visit(node.right, level + 1)
-        current_max = left_max if len(left_max) >= len(right_max) else right_max
+            return []
+        nonlocal max_path
+        left_arm = visit(node.left, level + 1)  # left arm is the maximum aligned chain descendant only from the node
+        right_arm = visit(node.right, level + 1)
         best_arm = left_arm if len(left_arm) >= len(right_arm) else right_arm
-
-        nonlocal max_aligned
         if not is_aligned(node, level):
-            if len(current_max) >= len(max_aligned):
-                max_aligned = current_max
-            return [], []
+            if len(best_arm) >= len(max_path):
+                max_path = best_arm
+            return []
         else:
-            merged_arm = list(reversed(left_arm)) + [node] + right_arm
-            if len(merged_arm) >= len(current_max):
-                current_max = merged_arm
-            if len(current_max) >= len(max_aligned):
-                max_aligned = current_max
-            return current_max, [node] + best_arm
+            merged_arms = list(reversed(left_arm)) + [node] + right_arm
+            if len(merged_arms) >= len(max_path):
+                max_path = merged_arms
+            return [node] + best_arm
 
     visit(root, 0)
-    return max_aligned
+    return max_path
+
 
 print(get_max_aligned_path(a))
