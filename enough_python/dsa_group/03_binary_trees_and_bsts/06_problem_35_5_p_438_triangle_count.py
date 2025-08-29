@@ -77,21 +77,19 @@ def get_triangles(root):
 
     def visit(node):
         if not node:
-            return ()
+            return [], []
 
         left_children = []
         right_children = []
         if has_left(node):
             left_children.append(node.left)
+            left = visit(node.left)
+            left_children.extend(left[0])
         if has_right(node):
             right_children.append(node.right)
-        left: tuple[list, list] = visit(node.left)
-        right: tuple[list, list] = visit(node.right)
-        if left and left[0]:
-            left_children.extend(left[0])
-        if right and right[1]:
+            right = visit(node.right)
             right_children.extend(right[1])
-        storage[node] = (left_children, right_children)
+        storage[node] = left_children, right_children
         return left_children, right_children
 
     visit(root)
