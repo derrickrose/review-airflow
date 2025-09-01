@@ -25,6 +25,7 @@ depth 7     M7
 Output: 7. The longest chain of aligned nodes is (7) 6 -> 5 -> 4 -> 3 -> 2 -> 1 -> 2 [K,J,I,H,E,B,D]
 
 """
+from typing import Optional
 
 
 class Node:
@@ -75,40 +76,33 @@ h.set_right(l)
 k.set_left(m)
 
 
-# TODO next check order and try to understand why we have to inverse
-# TODO next complexity (time, space) analysis and walk trough the recursions to explain why should I reverse the left path
-
-
-def get_max_aligned_path(root) -> list:
+def get_max_aligned_path(root):
     if not root:
         return []
 
-    def is_aligned(node, level) -> bool:
+    def is_aligned(node, level):
         if not node:
             return False
         return node.value == level
 
     max_path = []
 
-    def visit(node, level) -> tuple[list, list]:
+    def visit(node, level):
         if not node:
-            return [], []  # first list is max_aligned (no consideration of direction) and second list is the arm (max aligned downward only nodes)
-
-        left_max_aligned, left_arm = visit(node.left, level + 1)
-        right_max_aligned, right_arm = visit(node.right, level + 1)
-        current_max_aligned = left_max_aligned if len(left_max_aligned) >= len(right_max_aligned) else right_max_aligned
-        current_arm = left_arm if len(left_arm) >= len(right_arm) else right_arm
+            return []
         nonlocal max_path
-        max_path = current_max_aligned if len(current_max_aligned) >= len(max_path) else max_path
-
+        left_arm = visit(node.left, level + 1)  # left arm is the maximum aligned chain descendant only from the node
+        right_arm = visit(node.right, level + 1)
+        best_arm = left_arm if len(left_arm) >= len(right_arm) else right_arm
         if not is_aligned(node, level):
-            return [], []
+            if len(best_arm) >= len(max_path):
+                max_path = best_arm
+            return []
         else:
-            merged_arm = list(reversed(left_arm)) + [node] + right_arm
-            current_arm = [node] + current_arm
-            current_max_aligned = merged_arm if len(merged_arm) >= len(current_max_aligned) else merged_arm
-            max_path = current_max_aligned if len(current_max_aligned) >= len(max_path) else max_path
-            return current_max_aligned, current_arm
+            merged_arms = list(reversed(left_arm)) + [node] + right_arm
+            if len(merged_arms) >= len(max_path):
+                max_path = merged_arms
+            return [node] + best_arm
 
     visit(root, 0)
     return max_path
