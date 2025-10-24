@@ -1,0 +1,2 @@
+Data architecture in AWS and python airflow
+and iceberg snowflake

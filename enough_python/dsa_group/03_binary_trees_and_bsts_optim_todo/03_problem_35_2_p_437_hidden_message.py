@@ -70,7 +70,7 @@ def get_hidden_message(root: Node) -> list:
     message = []
     def visit(node: Node) -> None:
         if not node:
-            return []
+            return
         if node.value[0] == "b":
             message.append(node.value[1])
             visit(node.left)
@@ -83,6 +83,7 @@ def get_hidden_message(root: Node) -> list:
             visit(node.left)
             message.append(node.value[1])
             visit(node.right)
+        return
     visit(root)
     return message
 
