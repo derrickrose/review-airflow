@@ -5,7 +5,7 @@ import os
 from airflow.models.dag import DAG
 from airflow.providers.amazon.aws.sensors.s3_key import S3KeySensor
 from airflow.providers.amazon.aws.operators.s3_list import S3ListOperator
-from sensors.custom_s3_key import CustomS3KeySensor
+from old_plugins.sensors import CustomS3KeySensor
 
 default_arguments = {
     'owner': "frils",

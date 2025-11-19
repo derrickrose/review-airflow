@@ -116,6 +116,62 @@ https://www.udemy.com/course/the-ultimate-hands-on-course-to-master-apache-airfl
 
 
 
+## to check 
+
+# Apache Airflow Upgrade Guide: 2.2.5 → 3.0
+
+## 📦 Version 2.3.0 (April 30, 2022)
+**Key Highlights**
+- 🚀 **Dynamic Task Mapping** — generate tasks dynamically based on runtime data.
+- 🧭 **Grid View replaces Tree View** in the UI for better observability.
+- 🧹 **New CLI commands**
+  - `airflow db clean` to purge old metadata.
+  - Support for downgrading metadata DB.
+- 🗃️ **Database schema changes** — requires migration during upgrade.
+
+---
+
+## ⚙️ Version 3.0.0 (April 22, 2025)
+**Major Overhaul**
+- 🧩 **Service-Oriented Architecture** — modularized components for scalability.
+- 💻 **Modern React-based UI + FastAPI backend** — faster and cleaner web interface.
+- 🧾 **DAG Versioning** — immutable DAG snapshots for better auditability.
+- 🪄 **Asset-Driven & Event-Based Scheduling** — trigger DAGs when data/assets are available.
+- 🌐 **Task Execution API** — execute tasks in multiple environments/languages.
+- 🔐 **Enhanced Security** — improved task isolation and authentication mechanisms.
+- ☁️ **Hybrid & Multi-Cloud Support** — designed for distributed deployments.
+
+---
+
+## 🧠 Summary
+Airflow **3.0** is the biggest evolution since 2.0:
+- New architecture for modern data pipelines.
+- Cleaner UI and API layers.
+- Dynamic, event-driven DAGs.
+- Stronger isolation, observability, and scalability.
+
+---
+
+### 🧰 Recommended Actions
+1. Review breaking changes in official [Airflow Upgrade Docs](https://airflow.apache.org/docs/apache-airflow/stable/installation/upgrading_to_airflow3.html).
+2. Test DAGs and custom operators in a staging environment.
+3. Validate provider package versions.
+4. Perform metadata DB migrations with backups.
+5. Roll out Airflow 3 gradually in production environments.
+
+datasets/data-driven scheduling (including assets in airflow 3)
+event-driven scheduling with assetwatchers
+dag bundles 
+@asset syntax to define dags
+dynamic task mapping
+custom xcom backends
+async/ deferrable operators
+taskflow api/decorators 
+object storage feature of the common io provider
+setup/teardown tasks 
+standalone dag processors 
+remote execution 
+multiple executor configuration
 
 
 

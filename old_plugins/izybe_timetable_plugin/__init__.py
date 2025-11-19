@@ -1,6 +1,6 @@
 from airflow.plugins_manager import AirflowPlugin
 
-from izybe_timetable_plugin.daily import DailyTimetable
+from old_plugins.izybe_timetable_plugin.daily import DailyTimetable
 
 
 class IzybeTimetablePlugin(AirflowPlugin):

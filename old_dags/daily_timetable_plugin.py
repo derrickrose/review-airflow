@@ -3,7 +3,7 @@ from datetime import datetime
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 
-from izybe_timetable_plugin import DailyTimetable
+from old_plugins.izybe_timetable_plugin import DailyTimetable
 
 import logging
 
