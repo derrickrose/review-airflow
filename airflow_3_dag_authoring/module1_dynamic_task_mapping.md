@@ -235,7 +235,7 @@
 ## from mapped tasks to classic operator
 
 - from expand(), one can create tasks based on current data
-- how to expand a taskflow operator @task and a classic operator BashOperator
+- how to expand a taskflow operator @task and a classic operator e.g. BashOperator
 - how to use the output of a mapped task into a classic operator to expand it
 - now, what if we want to use the output of a mapped task into a non taskflow operator instead of using expand() again
   ```text
