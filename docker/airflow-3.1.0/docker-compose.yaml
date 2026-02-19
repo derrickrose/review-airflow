@@ -107,6 +107,7 @@ x-airflow-common:
     - ../../lib:/opt/airflow/lib
     - ../../plugins:/opt/airflow/plugins
     - ../../tests:/opt/airflow/tests
+    - /home/frils/Documents/data:/opt/airflow/data
 #  user: "${AIRFLOW_UID:-50000}:0"
   user: "${AIRFLOW_UID:-50000}:${AIRFLOW_GID:-50000}"
   depends_on:
