@@ -6,12 +6,6 @@ dev/logs/
 my_venv/
 logs/
 docker/airflow-2.2.5/.env
-venv/
-zyk/
-interview_prep/
-fangaro/
-awscliv2.zip
-aws/
-aws-iam-authenticator
-ai_ml/
-NOTES.MD
+venv
+interview_prep
+routines
