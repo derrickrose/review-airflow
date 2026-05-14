@@ -933,39 +933,8 @@ with DAG(
     tags=TAGS,
     doc_md=__doc__,
 ):
-    # trading_date = extract_trading_date()
-    # all_load_tasks, generation_tasks = create_all_flows(trading_date=trading_date)
-    #
-    # # Task 1: Query Athena for pending on-demand requests (deferrable - non-blocking)
-    # query_on_demand_table = AthenaOperator(
-    #     task_id="query_on_demand_table",
-    #     query=f"SELECT * FROM {ONDEMAND_REQUESTS_TABLE} WHERE run_flag = '{RUN_FLAG_PENDING}'",
-    #     database=LAKEHOUSE_DATABASE,
-    #     workgroup=ATHENA_WORKGROUP,
-    #     # output_location=ATHENA_OUTPUT_LOCATION,
-    #     deferrable=True,
-    #     aws_conn_id=AWS_CONN_ID,
-    # )
-    #
-    # # Task 2: Process query results and build EMR job parameters
-    # process_on_demand_query_results_task = process_on_demand_query_results()
-    #
-    # # On-demand requests wait for all data loads to ensure data availability
-    # [*all_load_tasks] >> query_on_demand_table >> process_on_demand_query_results_task
-    #
-    # # Dynamic mapping creates one task per on-demand request for parallel execution
-    # generate_on_demand_files = EmrServerlessStartJobOperator.partial(
-    #     task_id="generate_on_demand_files",
-    #     map_index_template="{{ task.name }}",
-    #     application_id="{{ var.value.get('DEV_LUNA_CASH_REGULATORY_REPORTING_EMR_APPLICATION_ID') }}",
-    #     execution_role_arn="{{ var.value.get('DEV_LUNA_CASH_REGULATORY_REPORTING_EMR_ROLE') }}",
-    #     deferrable=True,
-    #     on_execute_callback=log_emr_job_start,
-    #     config={"tags": EMR_CONFIG_TAGS},
-    #     **EMR_RETRY_POLICY,
-    # ).expand_kwargs(process_on_demand_query_results_task)
-    #-------------------------------------
     trading_date = extract_trading_date()
+    all_load_tasks, generation_tasks = create_all_flows(trading_date=trading_date)
 
     # Task 1: Query Athena for pending on-demand requests (deferrable - non-blocking)
     query_on_demand_table = AthenaOperator(
@@ -982,7 +951,7 @@ with DAG(
     process_on_demand_query_results_task = process_on_demand_query_results()
 
     # On-demand requests wait for all data loads to ensure data availability
-    trading_date >> query_on_demand_table >> process_on_demand_query_results_task
+    [*all_load_tasks] >> query_on_demand_table >> process_on_demand_query_results_task
 
     # Dynamic mapping creates one task per on-demand request for parallel execution
     generate_on_demand_files = EmrServerlessStartJobOperator.partial(
@@ -999,5 +968,5 @@ with DAG(
     update_task = update_ondemand_requests_flag()
     verify_task = verify_update_status()
 
-    generate_on_demand_files >> update_task >> verify_task
+    process_on_demand_query_results_task >> generate_on_demand_files >> update_task >> verify_task
 
