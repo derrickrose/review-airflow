@@ -1,0 +1,98 @@
+-- STEP 1 — Create optimized TEMP table
+
+CREATE TABLE dev_luna_cash_lakehouse_core_db.ref_param_rts24_ondemand_tmp (
+    trading_date     date,
+    isin_code        string,
+    mic_code         string,
+    participant_id   string,
+    run_flag         string,
+    run_date         date,
+    run_timestamp    string,
+    id               string
+)
+PARTITIONED BY (run_flag)
+LOCATION 's3://dev-miketriky-split-bucket-350646758175-eu-west-3-an/test-datalake/ref_param_rts24_ondemand_tmp'
+TBLPROPERTIES (
+    'table_type'       = 'ICEBERG',
+    'format'           = 'PARQUET',
+    'write_compression'= 'ZSTD'
+)
+----------------------------------------------------
+
+-- STEP 2 — Copy data + generate missing UUIDs
+INSERT INTO dev_luna_cash_lakehouse_core_db.ref_param_rts24_ondemand_tmp
+SELECT
+  trading_date,
+  isin_code,
+  mic_code,
+  participant_id,
+  run_flag,
+  run_date,
+  run_timestamp,
+  CAST(uuid() AS VARCHAR) AS id
+FROM dev_luna_cash_lakehouse_core_db.ref_param_rts24_ondemand;
+----------------------------------------------------------------
+
+-- STEP 3 — Validate migration
+-- Row count check
+SELECT COUNT(*)
+FROM dev_luna_cash_lakehouse_core_db.ref_param_rts24_ondemand;
+
+SELECT COUNT(*)
+FROM dev_luna_cash_lakehouse_core_db.ref_param_rts24_ondemand_tmp;
+
+-- Must match exactly
+
+-- Check duplicates
+SELECT id, COUNT(*)
+FROM dev_luna_cash_lakehouse_core_db.ref_param_rts24_ondemand_tmp
+GROUP BY id
+HAVING COUNT(*) > 1;
+
+-- Should return 0 rows
+
+
+----------------------------------------------------------------
+
+-- STEP 4 — Safety backup rename
+ALTER TABLE dev_luna_cash_lakehouse_core_db.ref_param_rts24_ondemand
+RENAME TO ref_param_rts24_ondemand_old;
+
+
+----------------------------------------------------------------
+
+
+-- STEP 5 — Promote optimized table
+ALTER TABLE dev_luna_cash_lakehouse_core_db.ref_param_rts24_ondemand_tmp
+RENAME TO ref_param_rts24_ondemand;
+
+
+----------------------------------------------------------------
+
+-- STEP 6 — Validate new table
+
+SELECT *
+FROM dev_luna_cash_lakehouse_core_db.ref_param_rts24_ondemand
+WHERE run_flag = '0';
+
+----------------------------------------------------------------
+
+-- STEP 7 — Cleanup (after confidence)
+
+DROP TABLE dev_luna_cash_lakehouse_core_db.ref_param_rts24_ondemand_old;
+
+-- STEP 8 - set all run_flag to zero
+
+UPDATE dev_luna_cash_lakehouse_core_db.ref_param_rts24_ondemand SET run_flag = '0';
+
+
+-- STEP 9 - set all run_date NULL
+
+UPDATE dev_luna_cash_lakehouse_core_db.ref_param_rts24_ondemand SET run_date = NULL;
+
+-- STEP 10 - INSERT
+INSERT INTO dev_luna_cash_lakehouse_core_db.ref_param_rts24_ondemand
+    (trading_date, isin_code, mic_code, participant_id, run_flag, run_date, run_timestamp, id)
+VALUES
+    (DATE '2026-05-14', 'FR0000131104', 'XPAR', 'PART001', '0', NULL, '2026-05-14T08:00:00', CAST(uuid() AS VARCHAR)),
+    (DATE '2026-05-14', 'FR0000120271', 'XPAR', 'PART002', '0', NULL, '2026-05-14T08:00:00', CAST(uuid() AS VARCHAR));

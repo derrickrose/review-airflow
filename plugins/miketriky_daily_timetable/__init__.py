@@ -1,6 +1,9 @@
 from airflow.plugins_manager import AirflowPlugin
 
-from .daily import DailyTimetable
+try:
+    from .daily import DailyTimetable
+except ImportError:
+    from miketriky_daily_timetable.daily import DailyTimetable
 
 
 class MiketrikyDailyTimetablePlugin(AirflowPlugin):

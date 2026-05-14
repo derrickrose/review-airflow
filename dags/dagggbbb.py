@@ -37,6 +37,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from airflow import DAG
 from airflow.sdk import TaskGroup, task
 from airflow.providers.amazon.aws.operators.emr import EmrServerlessStartJobOperator
+from airflow.providers.amazon.aws.operators.athena import AthenaOperator
 from airflow.providers.amazon.aws.hooks.athena import AthenaHook
 
 # Local application imports
@@ -79,7 +80,8 @@ S3_ASSETS_BUCKET = f"euronext-luna-{ENV_LOWER}-assets"
 JOBS_BASE_PATH = (
     f"s3://{S3_ASSETS_BUCKET}/{MARKET_SCOPE}/{APPLICATION_NAME}/{VERSION_SAFE}/jobs"
 )
-# TODO note I uploaded main_2 to just remove the mandatory on segmentid
+ATHENA_OUTPUT_BUCKET = S3_ASSETS_BUCKET
+ATHENA_OUTPUT_LOCATION = f"s3://{ATHENA_OUTPUT_BUCKET}/athena-results/"
 JOB_ENTRYPOINT_FILE = "main.py"
 JOB_CONFIG_FILE = "config.json"
 SQL_BASE_SUBPATH = "sql"
@@ -140,7 +142,8 @@ EVENT_FLOWS_BY_SEGMENT: Dict[str, List[Tuple[str, str]]] = {
 # Athena Configuration
 LAKEHOUSE_DATABASE = f"{ENV_LOWER}_luna_cash_lakehouse_core_db"
 ONDEMAND_REQUESTS_TABLE = "ref_param_rts24_ondemand"
-ATHENA_WORKGROUP = f"{ENV_LOWER}-luna-cash-data-systems"
+# ATHENA_WORKGROUP = f"{ENV_LOWER}-luna-cash-data-systems"
+ATHENA_WORKGROUP = "primary"
 RUN_FLAG_PENDING = "0"
 RUN_FLAG_UNKNOWN = "1"
 RUN_FLAG_COMPLETED = "2"
@@ -415,8 +418,11 @@ def build_emr_job_params(
     """
     job_base_path = f"{JOBS_BASE_PATH}/{job_name}"
 
+    # Consistent naming: rts24-load-{job_name}-{segment_code}-{trading_date}
+    emr_job_name = f"rts24-load-{job_name}-{segment_code}-{trading_date}"
+
     return {
-        "name": f"rts24-{segment_code}-{job_name}-{trading_date}",
+        "name": emr_job_name,
         "job_driver": {
             "sparkSubmit": {
                 "entryPoint": f"{job_base_path}/{JOB_ENTRYPOINT_FILE}",
@@ -472,8 +478,16 @@ def build_file_generation_emr_job(
         ]
     )
 
+    # Consistent naming: rts24-generate-file-{job_name}-{segment_code}-{trading_date}
+    if trading_date_arg and "{{" not in str(trading_date_arg):
+        emr_job_name = (
+            f"rts24-generate-file-{job_name}-{segment_code}-{trading_date_arg}"
+        )
+    else:
+        emr_job_name = f"rts24-generate-file-{job_name}-{segment_code}"
+
     return {
-        "name": f"rts24-{segment_code}-{job_name}",
+        "name": emr_job_name,
         "job_driver": {
             "sparkSubmit": {
                 "entryPoint": f"{job_base_path}/{JOB_ENTRYPOINT_FILE}",
@@ -573,45 +587,25 @@ def create_all_flows(trading_date: str):
         generation_tasks.append(generation_task)
     return all_load_tasks, generation_tasks
 
-
 @task
-def read_on_demand_table(**context):
-    """Run Athena query, wait for completion, and build EMR params in one task."""
+def process_on_demand_query_results(**context):
+    """Process Athena query results and build EMR params for dynamic mapping."""
     ti = context["ti"]
     trading_date = ti.xcom_pull(task_ids="extract_trading_date")
+    query_execution_id = ti.xcom_pull(task_ids="query_on_demand_table")
 
     # Ensure string type for JSON serialization in downstream dynamic mapping
     trading_date = str(trading_date)
 
+    logger.info(LOG_SEPARATOR)
+    logger.info(f"Processing on-demand requests query results")
+    logger.info(f"Query execution ID: {query_execution_id}")
+    logger.info(LOG_SEPARATOR)
+
     athena_hook = AthenaHook(aws_conn_id=AWS_CONN_ID)
 
-    logger.info(LOG_SEPARATOR)
-    logger.info("Checking for pending RTS24 file regeneration requests")
-    logger.info(
-        f"Query: SELECT * FROM {ONDEMAND_REQUESTS_TABLE} WHERE run_flag='{RUN_FLAG_PENDING}'"
-    )
-    logger.info(f"Database: {LAKEHOUSE_DATABASE} | Workgroup: {ATHENA_WORKGROUP}")
-
-    query_execution_id = athena_hook.run_query(
-        query=f"SELECT * FROM {ONDEMAND_REQUESTS_TABLE} WHERE run_flag = '{RUN_FLAG_PENDING}'",
-        query_context={"Database": LAKEHOUSE_DATABASE},
-        result_configuration={},
-        workgroup=ATHENA_WORKGROUP,
-    )
-
-    logger.info(f"Query submitted - Execution ID: {query_execution_id}")
-    logger.info("Waiting for query completion (timeout: 1 hour, polling every 30s)...")
-
-    athena_hook.poll_query_status(
-        query_execution_id=query_execution_id,
-        max_polling_attempts=120,  # 120 attempts * 30s = 1 hour
-        sleep_time=30,
-    )
-
-    logger.info(f"Query completed - Execution ID: {query_execution_id}")
-    logger.info("Processing query results...")
-
     job_params = []
+    request_ids = []  # Collect IDs for later update
     paginator = athena_hook.get_query_results_paginator(query_execution_id)
     is_first_row = True
     request_count = 0
@@ -638,15 +632,18 @@ def read_on_demand_table(**context):
 
                 request_count += 1
 
-                # Log business-friendly request interpretation
-                req_date = row_data.get("trading_date", "N/A")
-                req_mic = row_data.get("mic_code", "ALL")
-                req_isin = row_data.get("isin_code", "ALL")
-                req_participant = row_data.get("participant_id", "ALL")
+                # Log business-friendly request interpretation with only present values
+                log_parts = [f"Request #{request_count}: Generate RTS24 files"]
+                if row_data.get("trading_date"):
+                    log_parts.append(f"date={row_data.get('trading_date')}")
+                if row_data.get("mic_code"):
+                    log_parts.append(f"MIC={row_data.get('mic_code')}")
+                if row_data.get("isin_code"):
+                    log_parts.append(f"ISIN={row_data.get('isin_code')}")
+                if row_data.get("participant_id"):
+                    log_parts.append(f"Participant={row_data.get('participant_id')}")
 
-                logger.info(
-                    f"Request #{request_count}: Regenerate RTS24 files for date={req_date} | MIC={req_mic} | ISIN={req_isin} | Participant={req_participant}"
-                )
+                logger.info(" | ".join(log_parts))
                 logger.info(
                     f"Request #{request_count} raw data: {json.dumps(row_data, ensure_ascii=False)}"
                 )
@@ -657,6 +654,10 @@ def read_on_demand_table(**context):
                     logger.info(
                         f"Request #{request_count}: EMR job prepared - {emr_params.get('name', 'unknown')}"
                     )
+                    # Collect ID only if EMR job was successfully created
+                    request_id = row_data.get("id")
+                    if request_id:
+                        request_ids.append(request_id)
 
     logger.info(LOG_SEPARATOR)
     if job_params:
@@ -670,10 +671,13 @@ def read_on_demand_table(**context):
         logger.info("Result: Skipping on-demand file generation - no work to perform")
     logger.info(LOG_SEPARATOR)
 
+    # Store IDs separately for update task
+    ti.xcom_push(key="request_ids", value=request_ids)
+
     return job_params
 
 
-@task
+
 def build_emr_params_for_row(
     row: Dict[str, Any], trading_date: str
 ) -> Optional[Dict[str, Any]]:
@@ -734,8 +738,8 @@ def build_emr_params_for_row(
         }
     }
 
-    # Build descriptive job name for observability in EMR console
-    job_name_parts = ["rts24-demand", job_name]
+    # Build consistent job name: rts24-on-demand-{job_name}-key1_value1-key2_value2-trading_date
+    job_name_parts = [f"rts24-on-demand-{job_name}"]
     if mic:
         job_name_parts.append(f"mic_{mic}")
     if isin:
@@ -757,45 +761,150 @@ def build_emr_params_for_row(
 
     return {"name": name, "job_driver": job_driver}
 
-
 @task
-def retrieve_and_process_rows(trading_date: str) -> List[Dict[str, Any]]:
-    """Retrieve rows from Athena and process them dynamically."""
+def update_ondemand_requests_flag(**context):
+    """Update run_flag to 2 for all processed on-demand requests using ID column."""
+    ti = context["ti"]
+
+    # Get IDs from the process_on_demand_query_results task
+    request_ids = ti.xcom_pull(
+        task_ids="process_on_demand_query_results",
+        key="request_ids"
+    )
+
+    if not request_ids:
+        logger.info("No request IDs found to update.")
+        return
+
     athena_hook = AthenaHook(aws_conn_id=AWS_CONN_ID)
-    query_execution_id = athena_hook.run_query(
-        query=f"SELECT * FROM {ONDEMAND_REQUESTS_TABLE} WHERE run_flag = '{RUN_FLAG_PENDING}'",
+
+    # Single batch UPDATE using IN clause
+    # ID column is string type, so escape single quotes and quote values
+    escaped_ids = [str(id_val).replace("'", "''") for id_val in request_ids]
+    ids_str = ",".join(f"'{id_val}'" for id_val in escaped_ids)
+
+    # Get current date and timestamp for audit columns
+    run_date = datetime.now().strftime("%Y-%m-%d")
+    run_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    update_query = (
+        f"UPDATE {ONDEMAND_REQUESTS_TABLE} "
+        f"SET run_flag = '{RUN_FLAG_COMPLETED}', "
+        f"run_date = DATE '{run_date}', "
+        f"run_timestamp = '{run_timestamp}' "
+        f"WHERE id IN ({ids_str})"
+    )
+
+    logger.info(f"Batch updating {len(request_ids)} on-demand requests")
+    logger.info(f"  run_flag = '{RUN_FLAG_COMPLETED}'")
+    logger.info(f"  run_date = {run_date}")
+    logger.info(f"  run_timestamp = {run_timestamp}")
+    logger.info(f"Update query: {update_query}")
+
+    athena_hook.run_query(
+        query=update_query,
         query_context={"Database": LAKEHOUSE_DATABASE},
         result_configuration={},
         workgroup=ATHENA_WORKGROUP,
     )
 
+    logger.info(f"Update query executed for {len(request_ids)} on-demand requests. Verification will follow.")
+
+@task
+def verify_update_status(**context):
+    """Verify that the run_flag was successfully updated for all processed requests."""
+    ti = context["ti"]
+
+    # Get IDs from the process_on_demand_query_results task
+    request_ids = ti.xcom_pull(
+        task_ids="process_on_demand_query_results",
+        key="request_ids"
+    )
+
+    if not request_ids:
+        logger.info("No request IDs to verify.")
+        return
+
+    athena_hook = AthenaHook(aws_conn_id=AWS_CONN_ID)
+
+    # Build verification query - ID column is string type
+    escaped_ids = [str(id_val).replace("'", "''") for id_val in request_ids]
+    ids_str = ",".join(f"'{id_val}'" for id_val in escaped_ids)
+
+    verification_query = (
+        f"SELECT id, run_flag, run_date, run_timestamp, trading_date, mic_code, isin_code, participant_id "
+        f"FROM {ONDEMAND_REQUESTS_TABLE} "
+        f"WHERE id IN ({ids_str})"
+    )
+
+    logger.info(LOG_SEPARATOR)
+    logger.info("Verifying update status for processed requests")
+    logger.info(f"Verification query: {verification_query}")
+    logger.info(LOG_SEPARATOR)
+
+    query_execution_id = athena_hook.run_query(
+        query=verification_query,
+        query_context={"Database": LAKEHOUSE_DATABASE},
+        result_configuration={},
+        workgroup=ATHENA_WORKGROUP,
+    )
+
+    # Retrieve and analyze results
     paginator = athena_hook.get_query_results_paginator(query_execution_id)
-    rows = []
     is_first_row = True
+    verified_count = 0
+    failed_updates = []
 
-    for page in paginator:
-        result_set = page.get("ResultSet", {})
-        result_metadata = result_set.get("ResultSetMetadata", {})
-        column_info = result_metadata.get("ColumnInfo", [])
-        column_names = [c.get("Name") for c in column_info] if column_info else []
-        result_rows = result_set.get("Rows", [])
+    if paginator:
+        for page in paginator:
+            result_set = page.get("ResultSet", {})
+            result_metadata = result_set.get("ResultSetMetadata", {})
+            column_info = result_metadata.get("ColumnInfo", [])
+            column_names = [c.get("Name") for c in column_info] if column_info else []
+            rows = result_set.get("Rows", [])
 
-        for row in result_rows:
-            if is_first_row:
-                is_first_row = False
-                continue
+            for row in rows:
+                if is_first_row:
+                    is_first_row = False
+                    continue
 
-            data_cells = row.get("Data", [])
-            row_data = {
-                column_names[i] if i < len(column_names) else f"col_{i}": cell.get(
-                    "VarCharValue"
-                )
-                for i, cell in enumerate(data_cells)
-            }
-            rows.append(row_data)
+                data_cells = row.get("Data", [])
+                row_data = {}
+                for i, cell in enumerate(data_cells):
+                    name = column_names[i] if i < len(column_names) else f"col_{i}"
+                    row_data[name] = cell.get("VarCharValue")
 
-    return rows
+                request_id = row_data.get("id")
+                run_flag = row_data.get("run_flag")
+                run_date = row_data.get("run_date")
+                run_timestamp = row_data.get("run_timestamp")
 
+                if run_flag == RUN_FLAG_COMPLETED:
+                    verified_count += 1
+                    logger.info(
+                        f"✓ ID {request_id}: run_flag='{RUN_FLAG_COMPLETED}', "
+                        f"run_date={run_date}, run_timestamp={run_timestamp}"
+                    )
+                else:
+                    failed_updates.append(request_id)
+                    logger.warning(f"✗ ID {request_id}: run_flag is '{run_flag}' (expected '{RUN_FLAG_COMPLETED}')")
+
+    logger.info(LOG_SEPARATOR)
+    logger.info(f"Verification Summary:")
+    logger.info(f"  Total requests processed: {len(request_ids)}")
+    logger.info(f"  Successfully updated: {verified_count}")
+    logger.info(f"  Failed updates: {len(failed_updates)}")
+
+    if failed_updates:
+        logger.error(f"  Failed IDs: {failed_updates}")
+        raise ValueError(
+            f"Update verification failed: {len(failed_updates)} records not updated correctly. "
+            f"Failed IDs: {failed_updates}"
+        )
+    else:
+        logger.info("  ✓ All records updated successfully!")
+
+    logger.info(LOG_SEPARATOR)
 
 # ==============================================================================
 # DAG Definition
@@ -824,15 +933,60 @@ with DAG(
     tags=TAGS,
     doc_md=__doc__,
 ):
+    # trading_date = extract_trading_date()
+    # all_load_tasks, generation_tasks = create_all_flows(trading_date=trading_date)
+    #
+    # # Task 1: Query Athena for pending on-demand requests (deferrable - non-blocking)
+    # query_on_demand_table = AthenaOperator(
+    #     task_id="query_on_demand_table",
+    #     query=f"SELECT * FROM {ONDEMAND_REQUESTS_TABLE} WHERE run_flag = '{RUN_FLAG_PENDING}'",
+    #     database=LAKEHOUSE_DATABASE,
+    #     workgroup=ATHENA_WORKGROUP,
+    #     # output_location=ATHENA_OUTPUT_LOCATION,
+    #     deferrable=True,
+    #     aws_conn_id=AWS_CONN_ID,
+    # )
+    #
+    # # Task 2: Process query results and build EMR job parameters
+    # process_on_demand_query_results_task = process_on_demand_query_results()
+    #
+    # # On-demand requests wait for all data loads to ensure data availability
+    # [*all_load_tasks] >> query_on_demand_table >> process_on_demand_query_results_task
+    #
+    # # Dynamic mapping creates one task per on-demand request for parallel execution
+    # generate_on_demand_files = EmrServerlessStartJobOperator.partial(
+    #     task_id="generate_on_demand_files",
+    #     map_index_template="{{ task.name }}",
+    #     application_id="{{ var.value.get('DEV_LUNA_CASH_REGULATORY_REPORTING_EMR_APPLICATION_ID') }}",
+    #     execution_role_arn="{{ var.value.get('DEV_LUNA_CASH_REGULATORY_REPORTING_EMR_ROLE') }}",
+    #     deferrable=True,
+    #     on_execute_callback=log_emr_job_start,
+    #     config={"tags": EMR_CONFIG_TAGS},
+    #     **EMR_RETRY_POLICY,
+    # ).expand_kwargs(process_on_demand_query_results_task)
+    #-------------------------------------
     trading_date = extract_trading_date()
-    all_load_tasks, generation_tasks = create_all_flows(trading_date=trading_date)
-    fetch_ondemand_requests = read_on_demand_table()
+
+    # Task 1: Query Athena for pending on-demand requests (deferrable - non-blocking)
+    query_on_demand_table = AthenaOperator(
+        task_id="query_on_demand_table",
+        query=f"SELECT * FROM {ONDEMAND_REQUESTS_TABLE} WHERE run_flag = '{RUN_FLAG_PENDING}'",
+        database=LAKEHOUSE_DATABASE,
+        workgroup=ATHENA_WORKGROUP,
+        # output_location=ATHENA_OUTPUT_LOCATION,
+        deferrable=True,
+        aws_conn_id=AWS_CONN_ID,
+    )
+
+    # Task 2: Process query results and build EMR job parameters
+    process_on_demand_query_results_task = process_on_demand_query_results()
+
     # On-demand requests wait for all data loads to ensure data availability
-    [*all_load_tasks] >> fetch_ondemand_requests
+    trading_date >> query_on_demand_table >> process_on_demand_query_results_task
 
     # Dynamic mapping creates one task per on-demand request for parallel execution
-    process_ondemand_requests = EmrServerlessStartJobOperator.partial(
-        task_id="process_ondemand_requests",
+    generate_on_demand_files = EmrServerlessStartJobOperator.partial(
+        task_id="generate_on_demand_files",
         map_index_template="{{ task.name }}",
         application_id="{{ var.value.get('DEV_LUNA_CASH_REGULATORY_REPORTING_EMR_APPLICATION_ID') }}",
         execution_role_arn="{{ var.value.get('DEV_LUNA_CASH_REGULATORY_REPORTING_EMR_ROLE') }}",
@@ -840,4 +994,10 @@ with DAG(
         on_execute_callback=log_emr_job_start,
         config={"tags": EMR_CONFIG_TAGS},
         **EMR_RETRY_POLICY,
-    ).expand_kwargs(fetch_ondemand_requests)
+    ).expand_kwargs(process_on_demand_query_results_task)
+
+    update_task = update_ondemand_requests_flag()
+    verify_task = verify_update_status()
+
+    generate_on_demand_files >> update_task >> verify_task
+
