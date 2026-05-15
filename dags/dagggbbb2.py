@@ -60,7 +60,7 @@
 # ENV_LOWER = ENV.lower()
 # VERSION_SAFE = VERSION.replace("/", "-").replace(":", "-")
 #
-# DAG_ID = f"{ENV_UPPER}_LCRR_D004_RTS24_CLASSIC"
+# DAG_ID = f"{ENV_UPPER}_LCRR_D004_RTS24_CLASSIC_2"
 # DAG_MAX_ACTIVE_RUNS = 1
 # DAG_START_DATE = datetime(2026, 5, 3)
 # TAGS = [ENV, MARKET_SCOPE, APPLICATION_NAME, VERSION_SAFE]
@@ -591,11 +591,10 @@
 # def process_on_demand_query_results(**context):
 #     """Process Athena query results and build EMR params for dynamic mapping."""
 #     ti = context["ti"]
-#     trading_date = ti.xcom_pull(task_ids="extract_trading_date")
 #     query_execution_id = ti.xcom_pull(task_ids="query_on_demand_table")
 #
-#     # Ensure string type for JSON serialization in downstream dynamic mapping
-#     trading_date = str(trading_date)
+#     # For on-demand requests, trading_date comes from each row's data
+#     trading_date = None  # Will be overridden by row-specific trading_date
 #
 #     logger.info(LOG_SEPARATOR)
 #     logger.info(f"Processing on-demand requests query results")
@@ -906,15 +905,34 @@
 #
 #     logger.info(LOG_SEPARATOR)
 #
+#
+# @task
+# def get_execution_mode(**context):
+#     """Determine execution mode from DAG run configuration."""
+#     conf = context.get('dag_run').conf or {}
+#     mode = conf.get('mode', 'full')
+#
+#     logger.info(LOG_SEPARATOR)
+#     logger.info(f"Execution Mode: {mode}")
+#     logger.info(f"Valid modes: full, loads_only, generate_only, ondemand_only")
+#     logger.info(LOG_SEPARATOR)
+#
+#     # Validate mode
+#     valid_modes = ['full', 'loads_only', 'generate_only', 'ondemand_only']
+#     if mode not in valid_modes:
+#         raise ValueError(f"Invalid mode '{mode}'. Must be one of: {valid_modes}")
+#
+#     return mode
+#
 # # ==============================================================================
 # # DAG Definition
 # # ==============================================================================
 # with DAG(
 #     dag_id=DAG_ID,
 #     description=(
-#         "rts24 market events data processing - triggered by the completion of trading "
-#         "and order data processing, representing the availability of the consolidated "
-#         "market events data for the day"
+#         "RTS24 Parameterized Pipeline (Mode-based Approach) - Supports multiple execution modes: "
+#         "full, loads_only, generate_only, ondemand_only. "
+#         "Mode is checked at runtime but all tasks exist in DAG."
 #     ),
 #     start_date=DAG_START_DATE,
 #     schedule=reduce(
@@ -930,30 +948,30 @@
 #     ),
 #     catchup=False,
 #     max_active_runs=DAG_MAX_ACTIVE_RUNS,
-#     tags=TAGS,
+#     tags=TAGS + ["parameterized", "mode-based"],
 #     doc_md=__doc__,
 # ):
+#     # Get execution mode from config
+#     mode = get_execution_mode()
+#
+#     # Always extract trading_date (needed for loads and generate modes)
 #     trading_date = extract_trading_date()
+#
+#     # Create all tasks (structure is static, execution controlled by mode)
 #     all_load_tasks, generation_tasks = create_all_flows(trading_date=trading_date)
 #
-#     # Task 1: Query Athena for pending on-demand requests (deferrable - non-blocking)
+#     # On-demand workflow
 #     query_on_demand_table = AthenaOperator(
 #         task_id="query_on_demand_table",
 #         query=f"SELECT * FROM {ONDEMAND_REQUESTS_TABLE} WHERE run_flag = '{RUN_FLAG_PENDING}'",
 #         database=LAKEHOUSE_DATABASE,
 #         workgroup=ATHENA_WORKGROUP,
-#         # output_location=ATHENA_OUTPUT_LOCATION,
 #         deferrable=True,
 #         aws_conn_id=AWS_CONN_ID,
 #     )
 #
-#     # Task 2: Process query results and build EMR job parameters
 #     process_on_demand_query_results_task = process_on_demand_query_results()
 #
-#     # On-demand requests wait for all data loads to ensure data availability
-#     [*all_load_tasks] >> query_on_demand_table >> process_on_demand_query_results_task
-#
-#     # Dynamic mapping creates one task per on-demand request for parallel execution
 #     generate_on_demand_files = EmrServerlessStartJobOperator.partial(
 #         task_id="generate_on_demand_files",
 #         map_index_template="{{ task.name }}",
@@ -968,5 +986,13 @@
 #     update_task = update_ondemand_requests_flag()
 #     verify_task = verify_update_status()
 #
+#     # Simplified dependencies - All tasks connected
+#     # Mode parameter passed to each task to control behavior internally
+#     trading_date >> [*all_load_tasks] >> generation_tasks
+#     [*all_load_tasks] >> query_on_demand_table >> process_on_demand_query_results_task
 #     process_on_demand_query_results_task >> generate_on_demand_files >> update_task >> verify_task
+#
+#     # Note: In this approach, tasks check the 'mode' parameter internally
+#     # to decide if they should execute or exit early
+#     # This is less Airflow-native than ShortCircuit but simpler dependencies
 #

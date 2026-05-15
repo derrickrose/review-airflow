@@ -60,7 +60,7 @@
 # ENV_LOWER = ENV.lower()
 # VERSION_SAFE = VERSION.replace("/", "-").replace(":", "-")
 #
-# DAG_ID = f"{ENV_UPPER}_LCRR_D004_RTS24_CLASSIC"
+# DAG_ID = f"{ENV_UPPER}_LCRR_D004_RTS24_CLASSIC_1"
 # DAG_MAX_ACTIVE_RUNS = 1
 # DAG_START_DATE = datetime(2026, 5, 3)
 # TAGS = [ENV, MARKET_SCOPE, APPLICATION_NAME, VERSION_SAFE]
@@ -498,11 +498,13 @@
 #     }
 #
 #
-# def create_task_group(segment_code: str, segment_id: str, trading_date: str) -> tuple:
+# def create_task_group(segment_code: str, segment_id: str) -> tuple:
 #     """Create a task group for segment processing.
 #
 #     Returns individual task references to work around Airflow's unreliable
 #     TaskGroup dependency resolution when using bitshift operators.
+#
+#     Uses Jinja template for trading_date to resolve at runtime via XCom.
 #     """
 #     application_id_template = (
 #         "{{ var.value.get('"
@@ -515,6 +517,9 @@
 #         + "_LUNA_CASH_REGULATORY_REPORTING_EMR_ROLE') }}"
 #     )
 #
+#     # Use Jinja template to pull trading_date from XCom at runtime
+#     trading_date_template = "{{ ti.xcom_pull(task_ids='extract_trading_date') }}"
+#
 #     tasks = []
 #     with TaskGroup(group_id=f"load_segment_{segment_code}") as task_group:
 #         for flow_name, job_name in EVENT_FLOWS_BY_SEGMENT.get(segment_code, []):
@@ -522,7 +527,7 @@
 #                 task_id=f"run_{flow_name}_emr_job",
 #                 map_index_template="{{ task.name }}",
 #                 **build_emr_job_params(
-#                     flow_name, segment_code, segment_id, trading_date, job_name
+#                     flow_name, segment_code, segment_id, trading_date_template, job_name
 #                 ),
 #                 application_id=application_id_template,
 #                 execution_role_arn=execution_role_template,
@@ -541,6 +546,8 @@
 #
 #     Uses runtime XCom resolution to avoid parse-time circular dependencies
 #     that would prevent proper DAG construction.
+#
+#     Uses trigger_rule='none_failed' to allow running even if upstream load tasks are skipped.
 #     """
 #     application_id_template = (
 #         "{{ var.value.get('"
@@ -563,6 +570,7 @@
 #         ),
 #         application_id=application_id_template,
 #         execution_role_arn=execution_role_template,
+#         trigger_rule='none_failed',  # Run even if upstream load tasks are skipped
 #         deferrable=True,
 #         on_execute_callback=log_emr_job_start,
 #         config={"tags": EMR_CONFIG_TAGS},
@@ -570,32 +578,40 @@
 #     )
 #
 #
-# def create_all_flows(trading_date: str):
+# def create_all_flows():
 #     """Create one TaskGroup per segment and the file generation task outside.
 #
 #     Returns individual task references rather than TaskGroups to ensure reliable
 #     dependency resolution and prevent premature task execution.
+#
+#     NOTE: Does NOT set dependencies here - dependencies are set in DAG definition
+#     to allow conditional execution based on ShortCircuit gates.
 #     """
 #     all_load_tasks = []
 #     generation_tasks = []
+#     load_task_groups = {}
+#     load_tasks_by_segment = {}
+#     generation_tasks_dict = {}
+#
 #     for segment_code, segment_id in SEGMENT_CODE_TO_ID.items():
-#         task_group, tasks = create_task_group(segment_code, segment_id, trading_date)
+#         task_group, tasks = create_task_group(segment_code, segment_id)
 #         generation_task = create_file_generation_task(segment_code, segment_id)
-#         # Per-segment generation requires all segment loads to complete for data consistency
-#         tasks >> generation_task
 #         all_load_tasks.extend(tasks)
 #         generation_tasks.append(generation_task)
-#     return all_load_tasks, generation_tasks
+#         load_task_groups[segment_code] = task_group
+#         load_tasks_by_segment[segment_code] = tasks
+#         generation_tasks_dict[segment_code] = generation_task
+#
+#     return all_load_tasks, generation_tasks, load_task_groups, load_tasks_by_segment, generation_tasks_dict
 #
 # @task
 # def process_on_demand_query_results(**context):
 #     """Process Athena query results and build EMR params for dynamic mapping."""
 #     ti = context["ti"]
-#     trading_date = ti.xcom_pull(task_ids="extract_trading_date")
 #     query_execution_id = ti.xcom_pull(task_ids="query_on_demand_table")
 #
-#     # Ensure string type for JSON serialization in downstream dynamic mapping
-#     trading_date = str(trading_date)
+#     # For on-demand requests, trading_date comes from each row's data
+#     trading_date = None  # Will be overridden by row-specific trading_date
 #
 #     logger.info(LOG_SEPARATOR)
 #     logger.info(f"Processing on-demand requests query results")
@@ -906,15 +922,84 @@
 #
 #     logger.info(LOG_SEPARATOR)
 #
+#
+# # Segment filtering ShortCircuit operators
+# @task.short_circuit
+# def should_run_segment_EQU(**context):
+#     conf = context.get('dag_run').conf or {}
+#     segments = conf.get('segments', ['EQU', 'ETF', 'FXI', 'WAR', 'BLK'])
+#     should_run = 'EQU' in segments
+#     logger.info(f"Segment EQU: {'RUNNING' if should_run else 'SKIPPING'}")
+#     return should_run
+#
+# @task.short_circuit
+# def should_run_segment_ETF(**context):
+#     conf = context.get('dag_run').conf or {}
+#     segments = conf.get('segments', ['EQU', 'ETF', 'FXI', 'WAR', 'BLK'])
+#     should_run = 'ETF' in segments
+#     logger.info(f"Segment ETF: {'RUNNING' if should_run else 'SKIPPING'}")
+#     return should_run
+#
+# @task.short_circuit
+# def should_run_segment_FXI(**context):
+#     conf = context.get('dag_run').conf or {}
+#     segments = conf.get('segments', ['EQU', 'ETF', 'FXI', 'WAR', 'BLK'])
+#     should_run = 'FXI' in segments
+#     logger.info(f"Segment FXI: {'RUNNING' if should_run else 'SKIPPING'}")
+#     return should_run
+#
+# @task.short_circuit
+# def should_run_segment_WAR(**context):
+#     conf = context.get('dag_run').conf or {}
+#     segments = conf.get('segments', ['EQU', 'ETF', 'FXI', 'WAR', 'BLK'])
+#     should_run = 'WAR' in segments
+#     logger.info(f"Segment WAR: {'RUNNING' if should_run else 'SKIPPING'}")
+#     return should_run
+#
+# @task.short_circuit
+# def should_run_segment_BLK(**context):
+#     conf = context.get('dag_run').conf or {}
+#     segments = conf.get('segments', ['EQU', 'ETF', 'FXI', 'WAR', 'BLK'])
+#     should_run = 'BLK' in segments
+#     logger.info(f"Segment BLK: {'RUNNING' if should_run else 'SKIPPING'}")
+#     return should_run
+#
+# # Mode filtering ShortCircuit operators
+# @task.short_circuit
+# def should_run_loads(**context):
+#     """Determine if load tasks should run based on mode parameter."""
+#     conf = context.get('dag_run').conf or {}
+#     mode = conf.get('mode', 'full')
+#     logger.info(f"Execution mode: {mode}")
+#     logger.info(f"should_run_loads: {mode in ['full', 'loads_only']}")
+#     return mode in ['full', 'loads_only']
+#
+# @task.short_circuit
+# def should_run_generate(**context):
+#     """Determine if file generation tasks should run based on mode parameter."""
+#     conf = context.get('dag_run').conf or {}
+#     mode = conf.get('mode', 'full')
+#     logger.info(f"Execution mode: {mode}")
+#     logger.info(f"should_run_generate: {mode in ['full', 'generate_only']}")
+#     return mode in ['full', 'generate_only']
+#
+# @task.short_circuit
+# def should_run_ondemand(**context):
+#     """Determine if on-demand workflow should run based on mode parameter."""
+#     conf = context.get('dag_run').conf or {}
+#     mode = conf.get('mode', 'full')
+#     logger.info(f"Execution mode: {mode}")
+#     logger.info(f"should_run_ondemand: {mode in ['full', 'ondemand_only']}")
+#     return mode in ['full', 'ondemand_only']
+#
 # # ==============================================================================
 # # DAG Definition
 # # ==============================================================================
 # with DAG(
 #     dag_id=DAG_ID,
 #     description=(
-#         "rts24 market events data processing - triggered by the completion of trading "
-#         "and order data processing, representing the availability of the consolidated "
-#         "market events data for the day"
+#         "RTS24 Parameterized Pipeline (ShortCircuit Approach) - Supports multiple execution modes: "
+#         "full, loads_only, generate_only, ondemand_only"
 #     ),
 #     start_date=DAG_START_DATE,
 #     schedule=reduce(
@@ -930,35 +1015,67 @@
 #     ),
 #     catchup=False,
 #     max_active_runs=DAG_MAX_ACTIVE_RUNS,
-#     tags=TAGS,
+#     tags=TAGS + ["parameterized", "shortcircuit"],
 #     doc_md=__doc__,
 # ):
+#     # Always extract trading_date (needed for loads and generate modes)
 #     trading_date = extract_trading_date()
-#     all_load_tasks, generation_tasks = create_all_flows(trading_date=trading_date)
 #
-#     # Task 1: Query Athena for pending on-demand requests (deferrable - non-blocking)
+#     # Create ShortCircuit gates for different execution paths
+#     check_loads = should_run_loads()
+#     check_generate = should_run_generate()
+#     check_ondemand = should_run_ondemand()
+#
+#     # Create segment filtering gates - SEPARATE instances for loads vs generation
+#     # A ShortCircuit gate can only be used once in dependency chains
+#     load_seg_gates = {
+#         'EQU': should_run_segment_EQU(),
+#         'ETF': should_run_segment_ETF(),
+#         'FXI': should_run_segment_FXI(),
+#         'WAR': should_run_segment_WAR(),
+#         'BLK': should_run_segment_BLK(),
+#     }
+#
+#     gen_seg_gates = {
+#         'EQU': should_run_segment_EQU(),
+#         'ETF': should_run_segment_ETF(),
+#         'FXI': should_run_segment_FXI(),
+#         'WAR': should_run_segment_WAR(),
+#         'BLK': should_run_segment_BLK(),
+#     }
+#
+#     # Create all tasks (they always exist in DAG structure)
+#     all_load_tasks, generation_tasks, load_task_groups, load_tasks_by_segment, generation_tasks_dict = create_all_flows()
+#
+#     # On-demand workflow tasks
 #     query_on_demand_table = AthenaOperator(
 #         task_id="query_on_demand_table",
-#         query=f"SELECT * FROM {ONDEMAND_REQUESTS_TABLE} WHERE run_flag = '{RUN_FLAG_PENDING}'",
+#         query=f"SELECT id, trading_date, mic_code, isin_code, participant_id FROM {ONDEMAND_REQUESTS_TABLE} WHERE run_flag = '{RUN_FLAG_PENDING}'",
 #         database=LAKEHOUSE_DATABASE,
 #         workgroup=ATHENA_WORKGROUP,
-#         # output_location=ATHENA_OUTPUT_LOCATION,
+#         trigger_rule='none_failed',  # Run even if upstream is skipped
 #         deferrable=True,
 #         aws_conn_id=AWS_CONN_ID,
 #     )
 #
-#     # Task 2: Process query results and build EMR job parameters
 #     process_on_demand_query_results_task = process_on_demand_query_results()
 #
-#     # On-demand requests wait for all data loads to ensure data availability
-#     [*all_load_tasks] >> query_on_demand_table >> process_on_demand_query_results_task
+#     application_id_template = (
+#         "{{ var.value.get('"
+#         + ENV_UPPER
+#         + "_LUNA_CASH_REGULATORY_REPORTING_EMR_APPLICATION_ID') }}"
+#     )
+#     execution_role_template = (
+#         "{{ var.value.get('"
+#         + ENV_UPPER
+#         + "_LUNA_CASH_REGULATORY_REPORTING_EMR_ROLE') }}"
+#     )
 #
-#     # Dynamic mapping creates one task per on-demand request for parallel execution
 #     generate_on_demand_files = EmrServerlessStartJobOperator.partial(
 #         task_id="generate_on_demand_files",
 #         map_index_template="{{ task.name }}",
-#         application_id="{{ var.value.get('DEV_LUNA_CASH_REGULATORY_REPORTING_EMR_APPLICATION_ID') }}",
-#         execution_role_arn="{{ var.value.get('DEV_LUNA_CASH_REGULATORY_REPORTING_EMR_ROLE') }}",
+#         application_id=application_id_template,
+#         execution_role_arn=execution_role_template,
 #         deferrable=True,
 #         on_execute_callback=log_emr_job_start,
 #         config={"tags": EMR_CONFIG_TAGS},
@@ -968,5 +1085,24 @@
 #     update_task = update_ondemand_requests_flag()
 #     verify_task = verify_update_status()
 #
+#     # Dependencies matching checkpoint structure with segment filtering added
+#
+#     # Path 1: Loads (mode gate + segment gate per segment)
+#     trading_date >> check_loads
+#     for segment_code, load_group in load_task_groups.items():
+#         check_loads >> load_seg_gates[segment_code] >> load_group
+#
+#     # Path 2: Generation (mode gate + segment gate only, NO load dependency)
+#     # IMPORTANT: Cannot depend on loads or generate_only mode won't work
+#     trading_date >> check_generate
+#     for segment_code, gen_task in generation_tasks_dict.items():
+#         check_generate >> gen_seg_gates[segment_code] >> gen_task
+#
+#     # Path 3: On-demand (mode gate, depends on ALL loads)
+#     trading_date >> check_ondemand
+#     [*all_load_tasks] >> query_on_demand_table
+#     check_ondemand >> query_on_demand_table
+#     query_on_demand_table >> process_on_demand_query_results_task
 #     process_on_demand_query_results_task >> generate_on_demand_files >> update_task >> verify_task
 #
+# #g
